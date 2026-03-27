@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>매출/매입 관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-100 p-4">
+
+    <!-- 상단 대시보드 -->
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md mb-6">
+        <h1 class="text-2xl font-bold mb-4 text-blue-600">📊 분기별 정산 요약 (2026년)</h1>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div class="p-4 bg-blue-50 rounded border">
+                <p class="text-sm">1분기 매출 (1/1~6/30)</p>
+                <p id="q1-total" class="text-xl font-bold">0원</p>
+            </div>
+            <div class="p-4 bg-green-50 rounded border">
+                <p class="text-sm">2분기 매출 (7/1~12/30)</p>
+                <p id="q2-total" class="text-xl font-bold">0원</p>
+            </div>
+            <div class="p-4 bg-red-50 rounded border">
+                <p class="text-sm">미납 합계 / 전체 순이익</p>
+                <p id="summary-total" class="text-lg font-bold">미납: 0 / 이익: 0</p>
+            </div>
+        </div>
+        <button onclick="sendEmailReport()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">📧 cavelsh@gmail.com으로 보고서 전송</button>
+    </div>
+
+    <!-- 검색 및 입력 폼 -->
+    <div class="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-700">📝 신규 데이터 입력 / 검색</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="input-form">
+            <input type="date" id="date" class="border p-2 rounded">
+            <input type="text" id="customer" placeholder="고객명" class="border p-2 rounded">
+            <input type="text" id="address" placeholder="주소" class="border p-2 rounded col-span-2">
+            <input type="text" id="item" placeholder="품목" class="border p-2 rounded">
+            <input type="number" id="purchasePrice" placeholder="매입가" class="border p-2 rounded">
+            <input type="number" id="salePrice" placeholder="판매가" class="border p-2 rounded">
+            <select id="paymentMethod" class="border p-2 rounded">
+                <option value="세금계산서">세금계산서</option>
+                <option value="통장 입금">통장 입금</option>
+                <option value="카드 결제">카드 결제</option>
+                <option value="현금">현금</option>
+            </select>
+            <select id="unpaidStatus" class="border p-2 rounded">
+                <option value="입금완료">입금완료</option>
+                <option value="미납">미납</option>
+            </select>
+            <input type="text" id="memo" placeholder="비고" class="border p-2 rounded col-span-3">
+            <button onclick="saveData()" class="bg-green-600 text-white p-2 rounded hover:bg-green-700">저장하기</button>
+        </div>
+    </div>
+
+    <!-- 데이터 리스트 -->
+    <div class="max-w-6xl mx-auto bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-200 text-sm">
+                    <th class="p-2 border">날짜</th><th class="p-2 border">고객명</th>
+                    <th class="p-2 border">품목</th><th class="p-2 border">매입가</th>
+                    <th class="p-2 border">판매가</th><th class="p-2 border">차액</th>
+                    <th class="p-2 border">미납액</th><th class="p-2 border">결제방식</th>
+                </tr>
+            </thead>
+            <tbody id="data-list" class="text-sm"></tbody>
+        </table>
+    </div>
+
+    <script>
+        // 1. Firebase 설정 (본인의 설정으로 교체하세요)
+        const firebaseConfig = {
+	  apiKey: "AIzaSyDj1NuIhzszfuR6F-uNxf7mmiBIMdmdPRo",
+	  authDomain: "cavelsh-97a49.firebaseapp.com",
+	  projectId: "cavelsh-97a49",
+	  storageBucket: "cavelsh-97a49.firebasestorage.app",
+	  messagingSenderId: "427204872944",
+	  appId: "1:427204872944:web:e378535fd5bbf12dae1035",
+	  measurementId: "G-ZMWFZ9S7EB"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // 2. 데이터 저장 로직
+        async function saveData() {
+            const data = {
+                date: document.getElementById('date').value,
+                customer: document.getElementById('customer').value,
+                address: document.getElementById('address').value,
+                item: document.getElementById('item').value,
+                purchasePrice: Number(document.getElementById('purchasePrice').value),
+                salePrice: Number(document.getElementById('salePrice').value),
+                paymentMethod: document.getElementById('paymentMethod').value,
+                unpaidStatus: document.getElementById('unpaidStatus').value,
+                memo: document.getElementById('memo').value
+            };
+
+            // 자동 계산 로직 (조건 적용)
+            const diff = data.salePrice - data.purchasePrice;
+            const finalData = {
+                ...data,
+                difference: diff,
+                unpaidAmount: data.unpaidStatus === "미납" ? diff : 0,
+                salesBill: (data.paymentMethod === "세금계산서" || data.paymentMethod === "카드 결제") ? data.salePrice : 0,
+                purchaseBill: !data.item.includes("수리") ? data.purchasePrice : 0,
+                noData: (data.paymentMethod === "현금" || data.paymentMethod === "통장 입금") ? data.purchasePrice : 0
+            };
+
+            await db.collection("bills").add(finalData);
+            alert("저장 완료!");
+            location.reload();
+        }
+
+        // 3. 데이터 불러오기 및 통계 계산
+        db.collection("bills").orderBy("date", "desc").onSnapshot(snapshot => {
+            let q1Total = 0, q2Total = 0, totalUnpaid = 0, totalProfit = 0;
+            const listBody = document.getElementById('data-list');
+            listBody.innerHTML = "";
+
+            snapshot.forEach(doc => {
+                const b = doc.data();
+                const row = `<tr>
+                    <td class="p-2 border">${b.date}</td><td class="p-2 border">${b.customer}</td>
+                    <td class="p-2 border">${b.item}</td><td class="p-2 border">${b.purchasePrice.toLocaleString()}</td>
+                    <td class="p-2 border">${b.salePrice.toLocaleString()}</td><td class="p-2 border font-bold text-blue-600">${b.difference.toLocaleString()}</td>
+                    <td class="p-2 border text-red-500">${b.unpaidAmount.toLocaleString()}</td><td class="p-2 border">${b.paymentMethod}</td>
+                </tr>`;
+                listBody.innerHTML += row;
+
+                // 통계 합산
+                totalProfit += b.difference;
+                totalUnpaid += b.unpaidAmount;
+                const month = parseInt(b.date.split("-")[1]);
+                if (month >= 1 && month <= 6) q1Total += b.salesBill;
+                else if (month >= 7 && month <= 12) q2Total += b.salesBill;
+            });
+
+            document.getElementById('q1-total').innerText = q1Total.toLocaleString() + "원";
+            document.getElementById('q2-total').innerText = q2Total.toLocaleString() + "원";
+            document.getElementById('summary-total').innerText = `미납: ${totalUnpaid.toLocaleString()} / 이익: ${totalProfit.toLocaleString()}`;
+        });
+
+        // 4. 이메일 전송 로직
+        function sendEmailReport() {
+            const q1 = document.getElementById('q1-total').innerText;
+            const summary = document.getElementById('summary-total').innerText;
+            const mailtoUrl = `mailto:cavelsh@gmail.com?subject=2026 매출 리포트&body=1분기 매출: ${q1}%0A${summary}`;
+            window.location.href = mailtoUrl;
+        }
+    </script>
+</body>
+</html>
