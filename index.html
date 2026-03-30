@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>매출/매입 관리 시스템 V9</title>
+    <title>매출/매입 관리 시스템 V10</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -12,6 +12,7 @@
         input[type="number"] { text-align: right; font-family: 'Courier New', Courier, monospace; }
         .stat-card { border-radius: 8px; padding: 1.25rem; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .ime-kor { ime-mode: active; }
+        .row-pending { background-color: #fff7ed; } /* 미처리 항목 배경색 */
     </style>
 </head>
 <body class="bg-gray-100 p-4">
@@ -20,7 +21,7 @@
     <div class="max-w-7xl mx-auto bg-slate-800 p-3 rounded-lg shadow-lg mb-6 flex flex-wrap justify-between items-center gap-4">
         <div class="flex items-center space-x-3">
             <span class="text-white font-bold">🔐 데이터 잠금 해제</span>
-            <input type="password" id="mainPwInput" placeholder="암호 입력" class="p-2 rounded w-32 text-center outline-none">
+            <input type="password" id="mainPwInput" placeholder="암호 0927" class="p-2 rounded w-32 text-center outline-none">
             <button onclick="toggleAuth()" id="authBtn" class="bg-blue-500 text-white px-4 py-2 rounded font-bold hover:bg-blue-600 transition">확인</button>
         </div>
         <div id="authStatus" class="text-red-400 font-bold">⚠️ 금액 데이터 보호 모드</div>
@@ -35,11 +36,10 @@
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <!-- 1분기 카드 -->
                 <div class="stat-card bg-blue-50 border-blue-100">
                     <h2 class="font-bold text-blue-800 mb-3 border-b border-blue-200 pb-2 flex justify-between">
                         <span>📅 1분기 (1월~6월)</span>
-                        <span class="text-xs font-normal text-blue-600 self-end">*세금계산서/카드 기준</span>
+                        <span class="text-xs font-normal text-blue-600 self-end">*미처리 제외</span>
                     </h2>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between"><span>총 매출액:</span><span id="q1-sales" class="font-bold text-blue-700">****</span></div>
@@ -47,11 +47,10 @@
                         <div class="flex justify-between text-orange-600 font-medium"><span>└ 무자료(합계):</span><span id="q1-nodata">****</span></div>
                     </div>
                 </div>
-                <!-- 2분기 카드 -->
                 <div class="stat-card bg-green-50 border-green-100">
                     <h2 class="font-bold text-green-800 mb-3 border-b border-green-200 pb-2 flex justify-between">
                         <span>📅 2분기 (7월~12월)</span>
-                        <span class="text-xs font-normal text-green-600 self-end">*세금계산서/카드 기준</span>
+                        <span class="text-xs font-normal text-green-600 self-end">*미처리 제외</span>
                     </h2>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between"><span>총 매출액:</span><span id="q2-sales" class="font-bold text-green-700">****</span></div>
@@ -67,7 +66,10 @@
                     <span id="total-unpaid" class="text-xl font-black text-red-600">****</span>
                 </div>
                 <div class="p-4 bg-indigo-50 rounded border border-indigo-100 flex justify-between items-center">
-                    <span class="font-bold text-indigo-700">💰 전체 순이익 (총 차액)</span>
+                    <div class="flex flex-col">
+                        <span class="font-bold text-indigo-700">💰 전체 순이익 (확정 차액)</span>
+                        <span class="text-[10px] text-indigo-400">* 결제방식 '미처리' 데이터는 합계에서 제외됨</span>
+                    </div>
                     <span id="total-profit" class="text-xl font-black text-indigo-600">****</span>
                 </div>
             </div>
@@ -85,11 +87,12 @@
                 <input type="number" id="noDataInput" placeholder="무자료 금액(원)" class="border p-2 rounded bg-orange-50 font-bold text-orange-700">
                 <input type="number" id="purchasePrice" placeholder="매입가(원)" class="border p-2 rounded">
                 <input type="number" id="salePrice" placeholder="판매가(원)" class="border p-2 rounded font-bold">
-                <select id="paymentMethod" class="border p-2 rounded">
+                <select id="paymentMethod" class="border p-2 rounded bg-yellow-50 font-bold">
                     <option value="세금계산서">세금계산서</option>
                     <option value="통장 입금">통장 입금</option>
                     <option value="카드 결제">카드 결제</option>
                     <option value="현금">현금</option>
+                    <option value="미처리">⚠️ 미처리</option>
                 </select>
                 <select id="unpaidStatus" class="border p-2 rounded">
                     <option value="입금완료">입금완료</option>
@@ -104,7 +107,8 @@
 
             <div class="flex flex-wrap items-center gap-2 border-t pt-4">
                 <input type="text" id="searchInput" onkeyup="filterList()" placeholder="고객명/품목 검색..." class="border p-2 rounded flex-1 shadow-inner ime-kor">
-                <button onclick="toggleUnpaidOnly()" id="unpaidBtn" class="bg-orange-500 text-white px-4 py-2 rounded font-bold">⚠️ 미납자</button>
+                <button onclick="toggleFilter('unpaid')" id="unpaidBtn" class="bg-red-500 text-white px-4 py-2 rounded font-bold">⚠️ 미납자</button>
+                <button onclick="toggleFilter('pending')" id="pendingBtn" class="bg-orange-500 text-white px-4 py-2 rounded font-bold">⚡ 미처리 내역</button>
                 <button onclick="setMonthlyFilter()" class="bg-blue-100 text-blue-700 px-4 py-2 rounded font-bold">📅 이번 달</button>
                 <button onclick="resetFilters()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold">🔄 전체 보기</button>
             </div>
@@ -115,7 +119,7 @@
             <table id="main-table" class="w-full text-sm text-left border-collapse">
                 <thead>
                     <tr class="bg-gray-800 text-white">
-                        <th class="p-3 border">날짜</th><th class="p-3 border">고객명</th><th class="p-3 border">품목</th>
+                        <th class="p-3 border">날짜</th><th class="p-3 border">고객명</th><th class="p-3 border">결제방식</th><th class="p-3 border">품목</th>
                         <th class="p-3 border text-right bg-orange-700">무자료(원)</th>
                         <th class="p-3 border text-right">매입가(원)</th><th class="p-3 border text-right">판매가(원)</th>
                         <th class="p-3 border text-right text-yellow-300">차액(원)</th><th class="p-3 border text-center">관리</th>
@@ -127,7 +131,7 @@
     </div>
 
     <script>
-        // Firebase 설정 유지
+        // Firebase 설정 (기존 정보 유지)
         const firebaseConfig = {
             apiKey: "AIzaSyDj1NuIhzszfuR6F-uNxf7mmiBIMdmdPRo",
             authDomain: "cavelsh-97a49.firebaseapp.com",
@@ -141,7 +145,7 @@
         const db = firebase.firestore();
 
         let allData = [];
-        let showUnpaidOnly = false;
+        let currentFilter = 'none'; // 'none', 'unpaid', 'pending'
         let currentFilterMode = 'monthly'; 
         let isAuthenticated = false;
 
@@ -166,9 +170,16 @@
             filterList();
         });
 
+        function toggleFilter(type) {
+            currentFilter = (currentFilter === type) ? 'none' : type;
+            filterList();
+        }
+
         function filterList() {
             const q = document.getElementById('searchInput').value.toLowerCase();
             let filtered = allData;
+
+            // 기간 필터
             if (currentFilterMode === 'monthly') {
                 const now = new Date();
                 const curM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -177,8 +188,14 @@
             } else {
                 document.getElementById('view-title').innerText = `📊 전체 기간 정산 요약`;
             }
+
+            // 검색 필터
             filtered = filtered.filter(d => (d.customer || "").toLowerCase().includes(q) || (d.item || "").toLowerCase().includes(q));
-            if(showUnpaidOnly) filtered = filtered.filter(d => d.unpaidStatus === "미납");
+            
+            // 특수 필터 (미납/미처리)
+            if(currentFilter === 'unpaid') filtered = filtered.filter(d => d.unpaidStatus === "미납");
+            if(currentFilter === 'pending') filtered = filtered.filter(d => d.paymentMethod === "미처리");
+
             renderUI(filtered);
         }
 
@@ -190,22 +207,34 @@
             items.forEach(b => {
                 const month = (b.date && b.date.includes("-")) ? parseInt(b.date.split("-")[1]) : 0;
                 const nodata = Number(b.noDataAmount || 0);
-                const purchase = Number(b.purchaseBill || 0);
-                const sales = Number(b.salesBill || 0);
+                const isPending = (b.paymentMethod === "미처리");
 
-                if(month > 0) {
-                    if(month <= 6) { stats.q1Sales += sales; stats.q1Purchase += purchase; stats.q1NoData += nodata; }
-                    else { stats.q2Sales += sales; stats.q2Purchase += purchase; stats.q2NoData += nodata; }
+                // 미처리가 아닐 때만 요약 합계에 포함
+                if(!isPending) {
+                    if(month > 0) {
+                        if(month <= 6) { 
+                            stats.q1Sales += Number(b.salesBill || 0); 
+                            stats.q1Purchase += Number(b.purchaseBill || 0); 
+                            stats.q1NoData += nodata; 
+                        } else { 
+                            stats.q2Sales += Number(b.salesBill || 0); 
+                            stats.q2Purchase += Number(b.purchaseBill || 0); 
+                            stats.q2NoData += nodata; 
+                        }
+                    }
+                    stats.totalProfit += (b.difference || 0);
                 }
-                stats.totalProfit += (b.difference || 0);
+                
                 stats.totalUnpaid += (b.unpaidAmount || 0);
 
                 const fmt = (val) => isAuthenticated ? val.toLocaleString() + "원" : "****";
+                const rowClass = isPending ? 'row-pending' : '';
 
                 listBody.innerHTML += `
-                    <tr class="hover:bg-blue-50 border-b">
+                    <tr class="hover:bg-blue-50 border-b ${rowClass}">
                         <td class="p-3 border text-gray-500">${b.date || ''}</td>
                         <td class="p-3 border font-bold text-gray-800">${b.customer || ''} ${b.unpaidStatus === '미납' ? '<span class="text-red-500 text-[10px] font-bold">[미납]</span>' : ''}</td>
+                        <td class="p-3 border text-center"><span class="${isPending ? 'text-orange-600 font-bold' : 'text-gray-600'}">${b.paymentMethod || ''}</span></td>
                         <td class="p-3 border text-sm">${b.item || ''}</td>
                         <td class="p-3 border text-right text-orange-700 font-bold">${fmt(nodata)}</td>
                         <td class="p-3 border text-right">${fmt(b.purchasePrice || 0)}</td>
@@ -230,8 +259,7 @@
         }
 
         function setMonthlyFilter() { currentFilterMode = 'monthly'; filterList(); }
-        function toggleUnpaidOnly() { showUnpaidOnly = !showUnpaidOnly; filterList(); }
-        function resetFilters() { currentFilterMode = 'all'; showUnpaidOnly = false; document.getElementById('searchInput').value = ""; filterList(); }
+        function resetFilters() { currentFilterMode = 'all'; currentFilter = 'none'; document.getElementById('searchInput').value = ""; filterList(); }
 
         async function saveData() {
             const editId = document.getElementById('edit-id').value;
@@ -256,8 +284,8 @@
             try {
                 if (editId) { await db.collection("bills").doc(editId).update(finalData); }
                 else { await db.collection("bills").add(finalData); }
-                alert("성공"); resetForm();
-            } catch (e) { alert("실패"); }
+                alert("저장 완료"); resetForm();
+            } catch (e) { alert("저장 실패"); }
         }
 
         function downloadExcel() {
@@ -280,11 +308,11 @@
             document.getElementById('paymentMethod').value = d.paymentMethod;
             document.getElementById('unpaidStatus').value = d.unpaidStatus;
             document.getElementById('memo').value = d.memo;
-            document.getElementById('form-title').innerText = "✏️ 내역 수정 중...";
+            document.getElementById('form-title').innerText = "✏️ 수정 모드";
             window.scrollTo({top: 0, behavior: 'smooth'});
         }
 
-        async function deleteDoc(id) { if(confirm("삭제?")) await db.collection("bills").doc(id).delete(); }
+        async function deleteDoc(id) { if(confirm("삭제하시겠습니까?")) await db.collection("bills").doc(id).delete(); }
         function resetForm() {
             document.getElementById('edit-id').value = "";
             const inputs = document.querySelectorAll('#input-fields input');
