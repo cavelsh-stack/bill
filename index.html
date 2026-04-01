@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Management System V15.4</title>
+    <title>Financial Management System V15.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -12,13 +12,11 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');
         body { font-family: 'Inter', 'Pretendard', sans-serif; letter-spacing: -0.02em; }
         input[type="number"] { font-family: 'JetBrains Mono', monospace; text-align: right; }
-        .row-pending { background-color: #fefce8 !important; }
-        .row-unpaid { border-left: 4px solid #ef4444 !important; background-color: #fef2f2 !important; }
-        .row-repair { border-left: 4px solid #6366f1 !important; background-color: #f5f3ff !important; }
         .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .stat-card { transition: all 0.2s ease; }
-        .stat-card:hover { transform: translateY(-2px); }
+        @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .animate-pulse-red { animation: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-20">
@@ -29,7 +27,7 @@
                 <span class="text-xl">📊</span>
                 <span class="font-black text-lg tracking-tighter uppercase text-blue-400">Finance <span class="text-white">Admin</span></span>
             </div>
-            <div id="authArea" class="flex items-center gap-3">
+            <div class="flex items-center gap-3">
                 <div id="authGroup" class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
                     <input type="password" id="mainPwInput" placeholder="Passcode" class="bg-transparent px-3 py-1 w-24 text-center outline-none font-bold text-sm">
                     <button onclick="toggleAuth()" class="bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded-lg font-bold text-sm transition-all">접속</button>
@@ -47,32 +45,32 @@
                     <h2 class="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Financial Analysis</h2>
                     <div class="flex items-center gap-3">
                         <h1 class="text-3xl font-black text-slate-800">대시보드</h1>
-                        <select id="yearSelect" onchange="filterList()" class="bg-slate-100 border-none rounded-lg px-3 py-1 font-bold text-slate-600 outline-none cursor-pointer"></select>
+                        <select id="yearSelect" onchange="filterList()" class="bg-slate-100 border-none rounded-lg px-3 py-1 font-bold text-slate-600 outline-none"></select>
                     </div>
                 </div>
-                <button onclick="downloadExcel()" id="excelBtn" class="bg-slate-100 text-slate-400 px-6 py-2.5 rounded-xl font-bold cursor-not-allowed text-sm transition-all" disabled>📥 엑셀 내보내기</button>
+                <button onclick="downloadExcel()" id="excelBtn" class="bg-slate-100 text-slate-400 px-6 py-2.5 rounded-xl font-bold cursor-not-allowed text-sm" disabled>📥 엑셀 내보내기</button>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="stat-card p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-md">상반기 (H1)</span>
-                        <span class="text-blue-200 text-lg font-black italic">JAN - JUN</span>
+                        <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-md">상반기 (1-6월)</span>
+                        <span id="h1-total" class="text-blue-700 font-black text-sm"></span>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">세금 매출</p><p id="q1-sales" class="font-bold text-blue-700 text-sm">****</p></div>
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">세금 매입</p><p id="q1-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
+                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">매출</p><p id="q1-sales" class="font-bold text-blue-700 text-sm">****</p></div>
+                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">매입</p><p id="q1-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
                         <div><p class="text-[10px] text-orange-400 font-bold uppercase">무자료</p><p id="q1-nodata" class="font-bold text-orange-600 text-sm">****</p></div>
                     </div>
                 </div>
                 <div class="stat-card p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-md">하반기 (H2)</span>
-                        <span class="text-emerald-200 text-lg font-black italic">JUL - DEC</span>
+                        <span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-md">하반기 (7-12월)</span>
+                        <span id="h2-total" class="text-emerald-700 font-black text-sm"></span>
                     </div>
                     <div class="grid grid-cols-3 gap-2">
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">세금 매출</p><p id="q2-sales" class="font-bold text-emerald-700 text-sm">****</p></div>
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">세금 매입</p><p id="q2-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
+                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">매출</p><p id="q2-sales" class="font-bold text-emerald-700 text-sm">****</p></div>
+                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">매입</p><p id="q2-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
                         <div><p class="text-[10px] text-orange-400 font-bold uppercase">무자료</p><p id="q2-nodata" class="font-bold text-orange-600 text-sm">****</p></div>
                     </div>
                 </div>
@@ -81,7 +79,7 @@
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">이번 달 매출</p><p id="cur-month-sales" class="text-xl font-black text-blue-600">****</p></div>
                 <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100"><p class="text-[10px] text-slate-400 font-bold mb-1 uppercase">이번 달 지출</p><p id="cur-month-purchase" class="text-xl font-black text-rose-500">****</p></div>
-                <div class="p-4 bg-rose-600 rounded-2xl text-white shadow-md"><p class="text-[10px] text-rose-200 font-bold mb-1 uppercase">🚨 총 미납 잔액</p><p id="total-unpaid" class="text-xl font-black">****</p></div>
+                <div class="p-4 bg-rose-600 rounded-2xl text-white shadow-md shadow-rose-200"><p class="text-[10px] text-rose-100 font-bold mb-1 uppercase">🚨 미납 잔액 합계</p><p id="total-unpaid" class="text-xl font-black">****</p></div>
                 <div class="p-4 bg-slate-800 rounded-2xl text-white shadow-md"><p class="text-[10px] text-yellow-500 font-bold mb-1 uppercase">📈 연간 예상 순익</p><p id="total-profit" class="text-xl font-black text-yellow-400">****</p></div>
             </div>
         </div>
@@ -94,18 +92,23 @@
             <div class="p-6" id="input-fields">
                 <input type="hidden" id="edit-id">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
-                    <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">날짜</label><input type="date" id="date" class="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-blue-500 outline-none transition-all font-medium"></div>
-                    <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">고객명</label><input type="text" id="customer" class="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-blue-500 outline-none transition-all font-bold"></div>
-                    <div class="md:col-span-2 space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">현장 주소</label><input type="text" id="address" class="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-blue-500 outline-none transition-all font-medium"></div>
-                    <div class="md:col-span-2 space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">품목 상세 <span class="text-indigo-500">(수리 포함 시 매출 0)</span></label><input type="text" id="item" oninput="liveCalc()" class="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-blue-500 outline-none font-bold bg-blue-50/30"></div>
+                    <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">날짜</label><input type="date" id="date" class="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-blue-500 outline-none font-medium"></div>
+                    <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">고객명</label><input type="text" id="customer" class="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-blue-500 outline-none font-bold"></div>
+                    <div class="md:col-span-2 space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">현장 주소</label><input type="text" id="address" class="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-blue-500 outline-none font-medium"></div>
+                    <div class="md:col-span-2 space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">품목 상세 (수리 포함 시 매출 0)</label><input type="text" id="item" oninput="liveCalc()" class="w-full border-2 border-slate-100 p-3 rounded-xl focus:border-blue-500 outline-none font-bold bg-blue-50/30"></div>
                     <div class="space-y-2"><label class="text-[10px] font-black text-orange-400 ml-1 uppercase">무자료 금액</label><input type="number" id="noDataInput" oninput="liveCalc()" class="w-full border-2 border-orange-100 p-3 rounded-xl outline-none font-bold text-orange-700 bg-orange-50/30"></div>
-                    <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">매입 원가</label><input type="number" id="purchasePrice" oninput="liveCalc()" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none font-bold"></div>
+                    <div class="space-y-2"><label class="text-[10px] font-black text-slate-400 ml-1 uppercase">매입 원가</label><input type="number" id="purchasePrice" oninput="liveCalc()" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none font-bold text-slate-600"></div>
                     <div class="space-y-2"><label class="text-[10px] font-black text-blue-500 ml-1 uppercase">판매 가격</label><input type="number" id="salePrice" oninput="liveCalc()" class="w-full border-2 border-blue-100 p-3 rounded-xl outline-none font-black text-blue-700 bg-blue-50/50"></div>
                     <div class="space-y-2">
-                        <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">결제 방식</label>
-                        <select id="paymentMethod" onchange="syncUnpaidStatus()" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none font-bold bg-white cursor-pointer">
-                            <option value="세금계산서">세금계산서</option><option value="통장 입금">통장 입금</option><option value="카드 결제">카드 결제</option><option value="현금">현금</option><option value="미처리">⚠️ 미처리</option>
-                        </select>
+                        <label class="text-[10px] font-black text-slate-400 ml-1 uppercase">결제 방식 / 입금 상태</label>
+                        <div class="flex gap-2">
+                            <select id="paymentMethod" onchange="syncUnpaidStatus()" class="flex-1 border-2 border-slate-100 p-3 rounded-xl outline-none font-bold bg-white text-xs">
+                                <option value="세금계산서">세금계산서</option><option value="통장 입금">통장 입금</option><option value="카드 결제">카드 결제</option><option value="현금">현금</option><option value="미처리">⚠️ 미처리</option>
+                            </select>
+                            <select id="unpaidStatus" class="flex-1 border-2 border-slate-100 p-3 rounded-xl outline-none font-bold bg-white text-xs">
+                                <option value="입금완료">입금완료</option><option value="미납">🚨 미납</option><option value="미처리">미처리</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
                 <div class="flex gap-3">
@@ -124,21 +127,21 @@
                                onkeyup="if(window.event.keyCode==13){filterList()}">
                         <span class="absolute left-3 top-3.5 opacity-30 text-sm">🔍</span>
                     </div>
-                    <button onclick="filterList()" class="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md">확인</button>
-                    <button onclick="resetSearch()" class="px-5 py-2 bg-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-300 transition-all">취소</button>
+                    <button onclick="filterList()" class="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-md">확인</button>
+                    <button onclick="resetSearch()" class="px-5 py-2 bg-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-300">취소</button>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="toggleFilter('unpaid')" id="btn-unpaid" class="px-4 py-2 rounded-xl text-xs font-black border-2 border-rose-100 text-rose-500">미납</button>
-                    <button onclick="toggleFilter('pending')" id="btn-pending" class="px-4 py-2 rounded-xl text-xs font-black border-2 border-orange-100 text-orange-500">미처리</button>
-                    <button onclick="setMonthlyFilter()" class="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 text-white">이번 달</button>
-                    <button onclick="resetFilters()" class="px-4 py-2 rounded-xl text-xs font-black bg-slate-800 text-white">전체</button>
+                    <button onclick="toggleFilter('unpaid')" id="btn-unpaid" class="px-4 py-2 rounded-xl text-xs font-black border-2 border-rose-100 text-rose-500 hover:bg-rose-50 transition-all">미납 보기</button>
+                    <button onclick="toggleFilter('pending')" id="btn-pending" class="px-4 py-2 rounded-xl text-xs font-black border-2 border-orange-100 text-orange-500 hover:bg-orange-50 transition-all">미처리 보기</button>
+                    <button onclick="setMonthlyFilter()" class="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 text-white shadow-md">이번 달</button>
+                    <button onclick="resetFilters()" class="px-4 py-2 rounded-xl text-xs font-black bg-slate-800 text-white shadow-md">전체</button>
                 </div>
             </div>
             <div class="overflow-x-auto custom-scroll">
                 <table id="main-table" class="w-full text-sm text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-black tracking-widest border-b">
-                            <th class="p-4">날짜</th><th class="p-4">고객명/상태</th><th class="p-4 text-center">방식</th><th class="p-4">품목 상세</th><th class="p-4 text-right">무자료</th><th class="p-4 text-right">매입가</th><th class="p-4 text-right">판매가</th><th class="p-4 text-right bg-slate-50/80">예상순익</th><th class="p-4 text-center">관리</th>
+                            <th class="p-4">날짜</th><th class="p-4">고객명 / 상태</th><th class="p-4 text-center">방식</th><th class="p-4">품목 상세</th><th class="p-4 text-right">무자료</th><th class="p-4 text-right">매입가</th><th class="p-4 text-right font-black">판매가</th><th class="p-4 text-right bg-slate-50/80 font-black">순익</th><th class="p-4 text-center">관리</th>
                         </tr>
                     </thead>
                     <tbody id="data-list" class="divide-y divide-slate-50"></tbody>
@@ -183,7 +186,7 @@
                 document.getElementById('excelBtn').disabled = false;
                 document.getElementById('excelBtn').className = "bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer hover:bg-emerald-600 transition-all shadow-md text-sm";
                 filterList();
-            } else { alert("비밀번호 오류"); }
+            } else { alert("Passcode 오류"); }
         }
 
         function liveCalc() {
@@ -198,7 +201,7 @@
             const profit = sale - (noData + purchase);
             const div = document.getElementById('live-calc');
             if (sale > 0 || purchase > 0 || noData > 0 || isRepair) {
-                div.innerText = (isRepair ? "🛠️ 수리 제외 순익: " : "💰 예상 순익: ") + profit.toLocaleString() + "원";
+                div.innerText = (isRepair ? "🛠️ 수리(매출 0) 예상 순익: " : "💰 예상 순익: ") + profit.toLocaleString() + "원";
                 div.className = profit >= 0 ? "text-xs font-black text-blue-600 bg-blue-100 px-4 py-1.5 rounded-full" : "text-xs font-black text-rose-600 bg-rose-100 px-4 py-1.5 rounded-full";
             } else { div.innerText = ""; }
         }
@@ -237,7 +240,6 @@
                 const m = parseInt(dateParts[1]) || 0;
                 const isPending = (b.paymentMethod === "미처리");
 
-                // 연간 및 월간 통계 (미처리 항목 제외)
                 if(!isPending && b.date && b.date.startsWith(curYM)) {
                     s.curMS += (b.salePrice || 0);
                     s.curMP += (b.purchasePrice || 0);
@@ -248,43 +250,54 @@
                     else if(m >= 7 && m <= 12) { s.q2S += (b.salePrice||0); s.q2P += (b.purchasePrice||0); s.q2N += (b.noDataAmount||0); }
                     s.totalP += (b.difference || 0);
                 }
-                // 미납금은 연도와 무관하게 누적
                 s.totalU += (b.unpaidAmount || 0);
             });
 
             listItems.forEach(b => {
-                const isPending = (b.paymentMethod === "미처리");
                 const isUnpaid = (b.unpaidStatus === "미납");
+                const isPending = (b.paymentMethod === "미처리");
                 const isRepair = (b.item || "").includes("수리");
                 const fmt = (v) => isAuthenticated ? Number(v).toLocaleString() : "****";
                 
+                // 행 스타일 (미납일 때 붉은색 테두리와 배경 강조)
+                let rowStyle = "transition-colors whitespace-nowrap ";
+                if (isUnpaid) rowStyle += "bg-rose-50/70 border-l-4 border-rose-500 shadow-inner";
+                else if (isPending) rowStyle += "bg-amber-50/50 border-l-4 border-amber-400";
+                else if (isRepair) rowStyle += "bg-indigo-50/30 border-l-4 border-indigo-400";
+                else rowStyle += "hover:bg-slate-50";
+
                 listBody.innerHTML += `
-                    <tr class="border-b ${isRepair ? 'row-repair' : (isUnpaid ? 'row-unpaid' : (isPending ? 'row-pending' : ''))} whitespace-nowrap hover:bg-slate-50/50 transition-colors">
+                    <tr class="border-b ${rowStyle}">
                         <td class="p-4 text-[11px] font-bold text-slate-400">${b.date}</td>
-                        <td class="p-4 font-black text-slate-800">${b.customer} ${isRepair?'<span class="text-[8px] bg-indigo-500 text-white px-1 rounded ml-1">수리</span>':''}</td>
-                        <td class="p-4 text-center text-[10px] font-bold text-slate-500">${b.paymentMethod}</td>
-                        <td class="p-4 text-xs font-medium text-slate-500 max-w-[200px] truncate">${b.item}</td>
+                        <td class="p-4">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="font-black text-slate-800 text-sm">${b.customer}</span>
+                                ${isUnpaid ? '<span class="animate-pulse-red bg-rose-600 text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">미납🚨</span>' : ''}
+                                ${isPending ? '<span class="bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">미처리</span>' : ''}
+                                ${isRepair ? '<span class="bg-indigo-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">수리</span>' : ''}
+                            </div>
+                            <div class="text-[10px] text-slate-400 truncate max-w-[150px]">${b.address || ''}</div>
+                        </td>
+                        <td class="p-4 text-center text-[10px] font-black text-slate-500">${b.paymentMethod}</td>
+                        <td class="p-4 text-xs font-medium text-slate-500 max-w-[180px] truncate">${b.item}</td>
                         <td class="p-4 text-right text-orange-600 font-bold">${fmt(b.noDataAmount)}</td>
-                        <td class="p-4 text-right text-slate-400">${fmt(b.purchasePrice)}</td>
-                        <td class="p-4 text-right font-bold text-slate-900">${isRepair ? '0' : fmt(b.salePrice)}</td>
-                        <td class="p-4 text-right font-black text-blue-600 bg-blue-50/30">${fmt(b.difference)}</td>
+                        <td class="p-4 text-right text-slate-400 font-medium">${fmt(b.purchasePrice)}</td>
+                        <td class="p-4 text-right font-black ${isUnpaid ? 'text-rose-600' : 'text-slate-900'}">${isRepair ? '0' : fmt(b.salePrice)}</td>
+                        <td class="p-4 text-right font-black ${isUnpaid ? 'text-rose-700' : 'text-blue-600'} bg-white/40">${fmt(b.difference)}</td>
                         <td class="p-4 text-center space-x-1">
-                            <button onclick="editDoc('${b.id}')" class="text-[10px] font-bold border px-2 py-1 rounded hover:bg-slate-900 hover:text-white transition-all">수정</button>
-                            <button onclick="deleteDoc('${b.id}')" class="text-[10px] font-bold border border-rose-100 text-rose-500 px-2 py-1 rounded hover:bg-rose-600 hover:text-white transition-all">삭제</button>
+                            <button onclick="editDoc('${b.id}')" class="text-[10px] font-bold border border-slate-200 px-2 py-1.5 rounded-lg hover:bg-slate-900 hover:text-white transition-all shadow-sm bg-white">수정</button>
+                            <button onclick="deleteDoc('${b.id}')" class="text-[10px] font-bold border border-rose-100 text-rose-500 px-2 py-1.5 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm bg-white">삭제</button>
                         </td>
                     </tr>`;
             });
 
             const mask = (v) => isAuthenticated ? Number(v).toLocaleString() + "원" : "****";
-            // 상반기
             document.getElementById('q1-sales').innerText = mask(s.q1S);
             document.getElementById('q1-purchase').innerText = mask(s.q1P);
             document.getElementById('q1-nodata').innerText = mask(s.q1N);
-            // 하반기
             document.getElementById('q2-sales').innerText = mask(s.q2S);
             document.getElementById('q2-purchase').innerText = mask(s.q2P);
             document.getElementById('q2-nodata').innerText = mask(s.q2N);
-            // 하단 요약
             document.getElementById('cur-month-sales').innerText = mask(s.curMS);
             document.getElementById('cur-month-purchase').innerText = mask(s.curMP + s.curMN);
             document.getElementById('total-unpaid').innerText = mask(s.totalU);
@@ -311,6 +324,7 @@
             };
             
             const diff = d.salePrice - (d.purchasePrice + d.noDataAmount);
+            // 미납 잔액 계산 (미납 상태인 경우 순익만큼을 미납액으로 설정)
             const final = { ...d, difference: diff, unpaidAmount: d.unpaidStatus === "미납" ? diff : 0 };
 
             if (id) await db.collection("bills").doc(id).update(final);
@@ -329,25 +343,25 @@
             document.getElementById('purchasePrice').value = d.purchasePrice;
             document.getElementById('salePrice').value = d.salePrice;
             document.getElementById('paymentMethod').value = d.paymentMethod;
-            document.getElementById('unpaidStatus').value = d.unpaidStatus;
+            document.getElementById('unpaidStatus').value = d.unpaidStatus || "입금완료";
             document.getElementById('memo').value = d.memo;
-            liveCalc();
-            window.scrollTo({top:0, behavior:'smooth'});
+            liveCalc(); window.scrollTo({top:0, behavior:'smooth'});
         }
 
         function resetForm() { 
             document.getElementById('edit-id').value = ""; 
             document.querySelectorAll('#input-fields input').forEach(i => i.value = ""); 
             document.getElementById('date').value = new Date().toISOString().substring(0, 10);
+            document.getElementById('unpaidStatus').value = "입금완료";
             liveCalc();
         }
 
         async function deleteDoc(id) { if(confirm("삭제하시겠습니까?")) await db.collection("bills").doc(id).delete(); }
-        function downloadExcel() { if(isAuthenticated) { const wb = XLSX.utils.table_to_book(document.getElementById("main-table")); XLSX.writeFile(wb, "회계장부_수출.xlsx"); } }
+        function downloadExcel() { if(isAuthenticated) { const wb = XLSX.utils.table_to_book(document.getElementById("main-table")); XLSX.writeFile(wb, `회계기록_${new Date().toLocaleDateString()}.xlsx`); } }
         function toggleFilter(f) { currentFilter = (currentFilter === f) ? 'none' : f; filterList(); }
         function setMonthlyFilter() { currentFilterMode = 'monthly'; filterList(); }
         function resetFilters() { currentFilter = 'none'; currentFilterMode = 'all'; resetSearch(); }
-        function syncUnpaidStatus() { if(document.getElementById('paymentMethod').value === "미처리") document.getElementById('unpaidStatus').value = "미처리"; }
+        function syncUnpaidStatus() { if(document.getElementById('paymentMethod').value === "미처리") { document.getElementById('unpaidStatus').value = "미처리"; } }
     </script>
 </body>
 </html>
