@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Management System V16.0</title>
+    <title>Financial Management System V16.0 - Final</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -48,29 +48,6 @@
                     </div>
                 </div>
                 <button onclick="downloadExcel()" id="excelBtn" class="bg-slate-100 text-slate-400 px-6 py-2.5 rounded-xl font-bold cursor-not-allowed text-sm" disabled>📥 엑셀 내보내기</button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div class="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-md">상반기 (세금계산서 전용)</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">매출</p><p id="q1-sales" class="font-bold text-blue-700 text-sm">****</p></div>
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">매입</p><p id="q1-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
-                        <div><p class="text-[10px] text-orange-400 font-bold uppercase">무자료</p><p id="q1-nodata" class="font-bold text-orange-600 text-sm">****</p></div>
-                    </div>
-                </div>
-                <div class="p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-md">하반기 (세금계산서 전용)</span>
-                    </div>
-                    <div class="grid grid-cols-3 gap-2">
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">매출</p><p id="q2-sales" class="font-bold text-emerald-700 text-sm">****</p></div>
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">매입</p><p id="q2-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
-                        <div><p class="text-[10px] text-orange-400 font-bold uppercase">무자료</p><p id="q2-nodata" class="font-bold text-orange-600 text-sm">****</p></div>
-                    </div>
-                </div>
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -125,12 +102,9 @@
                         <span class="absolute left-3 top-3.5 opacity-30 text-sm">🔍</span>
                     </div>
                     <button onclick="filterList()" class="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 shadow-md">확인</button>
-                    <button onclick="resetSearch()" class="px-5 py-2 bg-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-300">취소</button>
                 </div>
                 <div class="flex gap-2">
                     <button onclick="toggleFilter('unpaid')" id="btn-unpaid" class="px-4 py-2 rounded-xl text-xs font-black border-2 border-rose-100 text-rose-500">미납</button>
-                    <button onclick="toggleFilter('pending')" id="btn-pending" class="px-4 py-2 rounded-xl text-xs font-black border-2 border-orange-100 text-orange-500">미처리</button>
-                    <button onclick="setMonthlyFilter()" class="px-4 py-2 rounded-xl text-xs font-black bg-indigo-600 text-white">이번 달</button>
                     <button onclick="resetFilters()" class="px-4 py-2 rounded-xl text-xs font-black bg-slate-800 text-white">전체</button>
                 </div>
             </div>
@@ -138,7 +112,7 @@
                 <table id="main-table" class="w-full text-sm text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-black tracking-widest border-b">
-                            <th class="p-4">날짜</th><th class="p-4">고객명 / 상태</th><th class="p-4 text-center">방식</th><th class="p-4">품목 상세</th><th class="p-4 text-right">무자료</th><th class="p-4 text-right">매입가</th><th class="p-4 text-right font-black">판매가</th><th class="p-4 text-right bg-slate-50/80 font-black">순익</th><th class="p-4 text-center">관리</th>
+                            <th class="p-4">날짜</th><th class="p-4">고객명 / 상태</th><th class="p-4 text-center">방식</th><th class="p-4 text-right">무자료</th><th class="p-4 text-right">매입가</th><th class="p-4 text-right font-black">판매가</th><th class="p-4 text-right bg-slate-50/80 font-black">순익</th><th class="p-4 text-center">관리</th>
                         </tr>
                     </thead>
                     <tbody id="data-list" class="divide-y divide-slate-50"></tbody>
@@ -162,7 +136,6 @@
 
         let allData = [];
         let currentFilter = 'none'; 
-        let currentFilterMode = 'all'; 
         let isAuthenticated = false;
 
         function formatCurrency(input) {
@@ -178,7 +151,7 @@
             const ys = document.getElementById('yearSelect');
             const curY = new Date().getFullYear();
             for(let i = curY - 2; i <= curY + 2; i++) {
-                const opt = document.createElement('option'); opt.value = i; opt.innerText = `${i}년 회계 기록`;
+                const opt = document.createElement('option'); opt.value = i; opt.innerText = `${i}년`;
                 if(i === curY) opt.selected = true; ys.appendChild(opt);
             }
         };
@@ -218,76 +191,54 @@
             let filtered = allData.filter(d => (d.date || "").startsWith(targetYear));
             if (q) filtered = filtered.filter(d => (d.customer||"").toLowerCase().includes(q) || (d.item||"").toLowerCase().includes(q));
             if (currentFilter === 'unpaid') filtered = filtered.filter(d => d.unpaidStatus === "미납");
-            if (currentFilter === 'pending') filtered = filtered.filter(d => d.paymentMethod === "미처리");
-            if (currentFilterMode === 'monthly') {
-                const curM = new Date().toISOString().substring(0, 7);
-                filtered = filtered.filter(d => (d.date || "").startsWith(curM));
-            }
             renderUI(filtered, targetYear);
         }
-
-        function resetSearch() { document.getElementById('searchInput').value = ""; filterList(); }
 
         function renderUI(listItems, targetYear) {
             if (!isAuthenticated) return;
 
-            let s = { q1S:0, q1P:0, q1N:0, q2S:0, q2P:0, q2N:0, totalU:0, totalP:0, curMS:0, curMP:0, curMN:0 };
+            let s = { curMS:0, curMP:0, curMN:0, totalU:0, totalP:0 };
             const curYM = new Date().toISOString().substring(0, 7);
             const listBody = document.getElementById('data-list');
             listBody.innerHTML = "";
 
             allData.forEach(b => {
-                const dateParts = b.date ? b.date.split("-") : [];
-                const y = dateParts[0]; const m = parseInt(dateParts[1]) || 0;
-                
+                const y = (b.date || "").substring(0, 4);
                 const isTaxInvoice = (b.paymentMethod === "세금계산서");
-                const isRepair = (b.item || "").includes("수리");
                 const isPending = (b.paymentMethod === "미처리");
 
-                if(isTaxInvoice && !isRepair && !isPending && y === targetYear) {
-                    if(m >= 1 && m <= 6) { s.q1S += (b.salePrice||0); s.q1P += (b.purchasePrice||0); s.q1N += (b.noDataAmount||0); }
-                    else if(m >= 7 && m <= 12) { s.q2S += (b.salePrice||0); s.q2P += (b.purchasePrice||0); s.q2N += (b.noDataAmount||0); }
-                    
-                    if(b.date.startsWith(curYM)) {
+                if(y === targetYear) {
+                    if(isTaxInvoice && b.date.startsWith(curYM)) {
                         s.curMS += (b.salePrice || 0); s.curMP += (b.purchasePrice || 0); s.curMN += (b.noDataAmount || 0);
                     }
-                }
-
-                if(!isPending && y === targetYear) {
-                    s.totalP += (b.difference || 0);
-                }
-                
-                // [미납 합계 로직] 미납 상태 항목의 판매가(salePrice)를 합계에 반영
-                if(y === targetYear) {
-                    s.totalU += (b.unpaidAmount || 0);
+                    if(!isPending) s.totalP += (b.difference || 0);
+                    
+                    // [핵심 수정] 상단 미납 합계는 '판매가(salePrice)'의 총합을 계산
+                    if(b.unpaidStatus === "미납") {
+                        s.totalU += (b.salePrice || 0);
+                    }
                 }
             });
 
             listItems.forEach(b => {
                 const isUnpaid = (b.unpaidStatus === "미납");
-                const isPending = (b.paymentMethod === "미처리");
-                const isRepair = (b.item || "").includes("수리");
-                const fmt = (v) => isAuthenticated ? Number(v).toLocaleString() : "****";
-                
-                let rowStyle = isUnpaid ? "bg-rose-50 border-l-4 border-rose-500" : (isPending ? "bg-amber-50 border-l-4 border-amber-400" : (isRepair ? "bg-indigo-50 border-l-4 border-indigo-400" : "hover:bg-slate-50"));
+                const fmt = (v) => isAuthenticated ? Number(v || 0).toLocaleString() : "****";
+                let rowStyle = isUnpaid ? "bg-rose-50 border-l-4 border-rose-500" : "hover:bg-slate-50";
 
                 listBody.innerHTML += `
-                    <tr class="border-b ${rowStyle} whitespace-nowrap transition-colors">
+                    <tr class="border-b ${rowStyle} whitespace-nowrap">
                         <td class="p-4 text-[11px] font-bold text-slate-400">${b.date}</td>
                         <td class="p-4">
                             <div class="flex items-center gap-2 mb-0.5">
                                 <span class="font-black text-slate-800">${b.customer}</span>
                                 ${isUnpaid ? '<span class="animate-pulse-red bg-rose-600 text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">미납🚨</span>' : ''}
-                                ${isPending ? '<span class="bg-amber-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">미처리</span>' : ''}
-                                ${isRepair ? '<span class="bg-indigo-500 text-white text-[9px] px-1.5 py-0.5 rounded-md font-black">수리</span>' : ''}
                             </div>
                         </td>
                         <td class="p-4 text-center text-[10px] font-black text-slate-500">${b.paymentMethod}</td>
-                        <td class="p-4 text-xs font-medium text-slate-500 max-w-[150px] truncate">${b.item}</td>
                         <td class="p-4 text-right text-orange-600 font-bold">${fmt(b.noDataAmount)}</td>
                         <td class="p-4 text-right text-slate-400">${fmt(b.purchasePrice)}</td>
                         <td class="p-4 text-right font-black ${isUnpaid ? 'text-rose-600' : 'text-slate-900'}">${fmt(b.salePrice)}</td>
-                        <td class="p-4 text-right font-black ${isUnpaid ? 'text-rose-700' : 'text-blue-600'} bg-white/30">${fmt(b.difference)}</td>
+                        <td class="p-4 text-right font-black text-blue-600 bg-white/30">${fmt(b.difference)}</td>
                         <td class="p-4 text-center space-x-1">
                             <button onclick="editDoc('${b.id}')" class="text-[10px] font-bold border px-2 py-1.5 rounded-lg bg-white">수정</button>
                             <button onclick="deleteDoc('${b.id}')" class="text-[10px] font-bold border border-rose-100 text-rose-500 px-2 py-1.5 rounded-lg bg-white">삭제</button>
@@ -296,40 +247,31 @@
             });
 
             const mask = (v) => isAuthenticated ? Number(v).toLocaleString() + "원" : "****";
-            document.getElementById('q1-sales').innerText = mask(s.q1S);
-            document.getElementById('q1-purchase').innerText = mask(s.q1P);
-            document.getElementById('q1-nodata').innerText = mask(s.q1N);
-            document.getElementById('q2-sales').innerText = mask(s.q2S);
-            document.getElementById('q2-purchase').innerText = mask(s.q2P);
-            document.getElementById('q2-nodata').innerText = mask(s.q2N);
             document.getElementById('cur-month-sales').innerText = mask(s.curMS);
             document.getElementById('cur-month-purchase').innerText = mask(s.curMP + s.curMN);
-            document.getElementById('total-unpaid').innerText = mask(s.totalU);
+            document.getElementById('total-unpaid').innerText = mask(s.totalU); // 판매가 합계 반영
             document.getElementById('total-profit').innerText = mask(s.totalP);
         }
 
         async function saveData() {
             const id = document.getElementById('edit-id').value;
             const sale = getRawNumber('salePrice');
-            const d = {
+            const noData = getRawNumber('noDataInput');
+            const purchase = getRawNumber('purchasePrice');
+            
+            const final = {
                 date: document.getElementById('date').value,
                 customer: document.getElementById('customer').value,
                 address: document.getElementById('address').value,
                 item: document.getElementById('item').value,
-                noDataAmount: getRawNumber('noDataInput'),
-                purchasePrice: getRawNumber('purchasePrice'),
+                noDataAmount: noData,
+                purchasePrice: purchase,
                 salePrice: sale,
+                difference: sale - (noData + purchase),
                 paymentMethod: document.getElementById('paymentMethod').value,
                 unpaidStatus: document.getElementById('unpaidStatus').value,
-                memo: ""
-            };
-            const diff = d.salePrice - (d.purchasePrice + d.noDataAmount);
-            
-            // [통합 수정] 미납일 경우 unpaidAmount 필드에 판매가(sale)를 그대로 저장
-            const final = { 
-                ...d, 
-                difference: diff, 
-                unpaidAmount: d.unpaidStatus === "미납" ? sale : 0 
+                // [수정] 데이터베이스 필드에도 미납 시 판매가를 기록 (나중의 통계/엑셀을 위해)
+                unpaidAmount: document.getElementById('unpaidStatus').value === "미납" ? sale : 0
             };
 
             if (id) await db.collection("bills").doc(id).update(final);
@@ -360,10 +302,9 @@
         }
 
         async function deleteDoc(id) { if(confirm("삭제하시겠습니까?")) await db.collection("bills").doc(id).delete(); }
-        function downloadExcel() { if(isAuthenticated) { const wb = XLSX.utils.table_to_book(document.getElementById("main-table")); XLSX.writeFile(wb, "Account_Record.xlsx"); } }
+        function downloadExcel() { if(isAuthenticated) { const wb = XLSX.utils.table_to_book(document.getElementById("main-table")); XLSX.writeFile(wb, "Financial_Record.xlsx"); } }
         function toggleFilter(f) { currentFilter = (currentFilter === f) ? 'none' : f; filterList(); }
-        function setMonthlyFilter() { currentFilterMode = 'monthly'; filterList(); }
-        function resetFilters() { currentFilter = 'none'; currentFilterMode = 'all'; resetSearch(); }
+        function resetFilters() { currentFilter = 'none'; filterList(); }
         function syncUnpaidStatus() { if(document.getElementById('paymentMethod').value === "미처리") document.getElementById('unpaidStatus').value = "미처리"; }
     </script>
 </body>
