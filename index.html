@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Management System V16.6 - Classic Auth</title>
+    <title>Financial Management & Quotation System V17.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -16,6 +16,7 @@
         .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         .animate-pulse-red { animation: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        .modal-active { overflow: hidden; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 pb-20">
@@ -24,9 +25,14 @@
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
                 <span class="text-xl">📊</span>
-                <span class="font-black text-lg tracking-tighter uppercase text-blue-400">입출금 <span class="text-white">관리자 로그인</span></span>
+                <span class="font-black text-lg tracking-tighter uppercase text-blue-400">입출금 <span class="text-white">관리 시스템</span></span>
             </div>
             <div class="flex items-center gap-3">
+                <button onclick="openQuoteModal()" id="quoteOpenBtn" class="hidden flex items-center gap-2 bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl border border-slate-700 transition-all">
+                    <span class="text-lg">📄</span>
+                    <span class="text-xs font-bold text-blue-300">견적서 작성</span>
+                </button>
+                
                 <div id="authGroup" class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
                     <input type="password" id="mainPwInput" placeholder="Passcode" class="bg-transparent px-3 py-1 w-24 text-center outline-none font-bold text-sm">
                     <button onclick="toggleAuth()" class="bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded-lg font-bold text-sm transition-all">접속</button>
@@ -142,7 +148,87 @@
         </div>
     </main>
 
+    <div id="quoteModal" class="fixed inset-0 z-[100] hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-4xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center bg-slate-50">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800">🖥️ 컴퓨터 견적 시스템</h2>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Quotation Builder V1.2</p>
+                </div>
+                <button onclick="closeQuoteModal()" class="text-slate-400 hover:text-slate-600 text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto custom-scroll flex-1 space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">견적 명칭</label>
+                        <input type="text" id="quoteTitle" placeholder="예: OO 사무용 PC 1대" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none focus:border-blue-500 font-bold">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">고객/업체명</label>
+                        <input type="text" id="quoteCustomer" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-black text-slate-400 uppercase">견적 날짜</label>
+                        <input type="date" id="quoteDate" class="w-full border-2 border-slate-100 p-3 rounded-xl outline-none">
+                    </div>
+                </div>
+
+                <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                        <div class="md:col-span-5 space-y-1 text-left">
+                            <label class="text-[10px] font-black text-blue-500 uppercase ml-1">품명/사양</label>
+                            <input type="text" id="tempItem" placeholder="CPU, RAM, SSD 등 부품 입력" class="w-full border-2 border-white p-2.5 rounded-lg outline-none focus:border-blue-400 text-sm font-bold">
+                        </div>
+                        <div class="md:col-span-2 space-y-1 text-left">
+                            <label class="text-[10px] font-black text-blue-500 uppercase ml-1">수량</label>
+                            <input type="number" id="tempQty" value="1" min="1" class="w-full border-2 border-white p-2.5 rounded-lg outline-none text-center text-sm font-bold">
+                        </div>
+                        <div class="md:col-span-3 space-y-1 text-left">
+                            <label class="text-[10px] font-black text-blue-500 uppercase ml-1">단가 (원)</label>
+                            <input type="text" id="tempPrice" oninput="formatCurrency(this)" placeholder="0" class="w-full border-2 border-white p-2.5 rounded-lg outline-none text-right text-sm font-bold">
+                        </div>
+                        <div class="md:col-span-2">
+                            <button onclick="addPartRow()" class="w-full bg-blue-600 text-white p-2.5 rounded-lg font-black text-sm hover:bg-blue-700 shadow-md transition-all">추가</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b-2 border-slate-100 text-[10px] text-slate-400 font-black uppercase">
+                                <th class="p-3 text-left">품명</th>
+                                <th class="p-3 text-center w-20">수량</th>
+                                <th class="p-3 text-right">단가</th>
+                                <th class="p-3 text-right">소계</th>
+                                <th class="p-3 text-center w-16">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="quoteListBody" class="divide-y divide-slate-50">
+                            </tbody>
+                        <tfoot>
+                            <tr class="bg-slate-900 text-white shadow-lg">
+                                <td colspan="3" class="p-4 font-bold text-right text-slate-400">총 합계금액</td>
+                                <td id="quoteGrandTotal" class="p-4 font-black text-right text-yellow-400 text-lg">0원</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="p-6 border-t bg-slate-50 flex gap-3">
+                <button onclick="saveQuotation()" class="flex-1 bg-slate-900 text-white p-4 rounded-2xl font-black shadow-lg hover:bg-black transition-all">견적서 저장하기</button>
+                <button onclick="closeQuoteModal()" class="px-8 bg-slate-200 text-slate-600 p-4 rounded-2xl font-bold hover:bg-slate-300">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // ----------------------------------------------------
+        // FIREBASE 설정
+        // ----------------------------------------------------
         const firebaseConfig = {
             apiKey: "AIzaSyDj1NuIhzszfuR6F-uNxf7mmiBIMdmdPRo",
             authDomain: "cavelsh-97a49.firebaseapp.com",
@@ -159,13 +245,17 @@
         let currentFilter = 'none'; 
         let currentFilterMode = 'all'; 
         let isAuthenticated = false;
+        let quoteParts = []; // 견적용 부품 배열
 
+        // ----------------------------------------------------
+        // 인증 시스템
+        // ----------------------------------------------------
         function toggleAuth() {
-            // [복원된 암호 비교 로직]
             if (document.getElementById('mainPwInput').value === "0927") {
                 isAuthenticated = true;
                 document.getElementById('authGroup').classList.add('hidden');
                 document.getElementById('authStatus').classList.remove('hidden');
+                document.getElementById('quoteOpenBtn').classList.remove('hidden'); // 견적 버튼 노출
                 document.getElementById('excelBtn').disabled = false;
                 document.getElementById('excelBtn').className = "bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer text-sm shadow-md";
                 document.getElementById('data-table-container').classList.remove('hidden');
@@ -173,6 +263,9 @@
             } else { alert("Passcode 오류"); }
         }
 
+        // ----------------------------------------------------
+        // 유틸리티
+        // ----------------------------------------------------
         function formatCurrency(input) {
             let value = input.value.replace(/[^0-9]/g, "");
             input.value = value ? Number(value).toLocaleString() : "";
@@ -191,6 +284,89 @@
             }
         };
 
+        // ----------------------------------------------------
+        // 견적서(Quotation) 시스템 로직
+        // ----------------------------------------------------
+        function openQuoteModal() {
+            document.getElementById('quoteModal').classList.remove('hidden');
+            document.body.classList.add('modal-active');
+            document.getElementById('quoteDate').value = new Date().toISOString().substring(0, 10);
+            quoteParts = [];
+            renderQuoteParts();
+        }
+
+        function closeQuoteModal() {
+            document.getElementById('quoteModal').classList.add('hidden');
+            document.body.classList.remove('modal-active');
+        }
+
+        function addPartRow() {
+            const item = document.getElementById('tempItem').value;
+            const qty = parseInt(document.getElementById('tempQty').value) || 0;
+            const price = getRawNumber('tempPrice');
+
+            if(!item || qty < 1 || price < 1) { alert("품명, 수량, 단가를 모두 입력하세요."); return; }
+
+            quoteParts.push({ id: Date.now(), item, qty, price, subtotal: qty * price });
+            
+            document.getElementById('tempItem').value = "";
+            document.getElementById('tempQty').value = "1";
+            document.getElementById('tempPrice').value = "";
+            renderQuoteParts();
+        }
+
+        function removePartRow(id) {
+            quoteParts = quoteParts.filter(p => p.id !== id);
+            renderQuoteParts();
+        }
+
+        function renderQuoteParts() {
+            const body = document.getElementById('quoteListBody');
+            let total = 0;
+            body.innerHTML = "";
+
+            quoteParts.forEach(p => {
+                total += p.subtotal;
+                body.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-3 font-bold text-slate-700">${p.item}</td>
+                        <td class="p-3 text-center font-bold text-slate-500">${p.qty}</td>
+                        <td class="p-3 text-right text-slate-600">${p.price.toLocaleString()}원</td>
+                        <td class="p-3 text-right font-black text-blue-600">${p.subtotal.toLocaleString()}원</td>
+                        <td class="p-3 text-center">
+                            <button onclick="removePartRow(${p.id})" class="text-rose-400 hover:text-rose-600 font-bold p-1">✕</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            document.getElementById('quoteGrandTotal').innerText = total.toLocaleString() + "원";
+        }
+
+        async function saveQuotation() {
+            const title = document.getElementById('quoteTitle').value;
+            const customer = document.getElementById('quoteCustomer').value;
+            if(!title || quoteParts.length === 0) { alert("견적 제목과 최소 하나 이상의 항목이 필요합니다."); return; }
+
+            const finalQuote = {
+                type: "computer_quotation",
+                title,
+                customer,
+                date: document.getElementById('quoteDate').value,
+                items: quoteParts,
+                totalAmount: quoteParts.reduce((s, p) => s + p.subtotal, 0),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection("quotations").add(finalQuote);
+                alert("견적서가 Firebase에 성공적으로 저장되었습니다.");
+                closeQuoteModal();
+            } catch(e) { alert("저장 중 오류 발생"); }
+        }
+
+        // ----------------------------------------------------
+        // 입출금(Accounting) 로직 (기존 유지)
+        // ----------------------------------------------------
         function liveCalc() {
             const noData = getRawNumber('noDataInput');
             const purchase = getRawNumber('purchasePrice');
@@ -209,6 +385,7 @@
         });
 
         function filterList() {
+            if(!isAuthenticated) return;
             const q = document.getElementById('searchInput').value.toLowerCase();
             const targetYear = document.getElementById('yearSelect').value;
             let filtered = allData.filter(d => (d.date || "").startsWith(targetYear));
@@ -224,8 +401,6 @@
         }
 
         function renderUI(listItems, targetYear) {
-            if (!isAuthenticated) return;
-
             let s = { q1S:0, q1P:0, q1N:0, q2S:0, q2P:0, q2N:0, curMS:0, curMP:0, curMN:0, curMPF:0, totalU:0, totalP:0 };
             const curYM = new Date().toISOString().substring(0, 7);
             const listBody = document.getElementById('data-list');
