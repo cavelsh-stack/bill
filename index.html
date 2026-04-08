@@ -56,7 +56,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-                    <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-md mb-4 inline-block uppercase">First Half</span>
+                    <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-md mb-4 inline-block uppercase">1분기 (1월~6월) (세금계산용)</span>
                     <div class="grid grid-cols-3 gap-2">
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase">매출</p><p id="q1-sales" class="font-bold text-blue-700 text-sm">****</p></div>
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase">매입</p><p id="q1-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
@@ -64,7 +64,7 @@
                     </div>
                 </div>
                 <div class="p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
-                    <span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-md mb-4 inline-block uppercase">Second Half</span>
+                    <span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-md mb-4 inline-block uppercase">2분기 (7월~12월) (세금계산용)</span>
                     <div class="grid grid-cols-3 gap-2">
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase">매출</p><p id="q2-sales" class="font-bold text-emerald-700 text-sm">****</p></div>
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase">매입</p><p id="q2-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
@@ -150,8 +150,8 @@
         <div class="bg-white w-full max-w-6xl max-h-[90vh] rounded-3xl shadow-2xl overflow-hidden flex flex-col border border-slate-700/20">
             <div class="p-6 border-b flex justify-between items-center bg-slate-50">
                 <div>
-                    <h2 class="text-xl font-black text-slate-800 uppercase tracking-tighter">📄 Quotation Manager</h2>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">웰디자인 전문 견적서 시스템</p>
+                    <h2 class="text-xl font-black text-slate-800 uppercase tracking-tighter">📄 견적서 관리</h2>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase">웰디자인</p>
                 </div>
                 <button onclick="closeQuoteModal()" class="text-slate-400 hover:text-slate-600 text-3xl font-light transition-all">&times;</button>
             </div>
@@ -184,7 +184,7 @@
     </div>
 <div class="col-span-4 space-y-1">
     <label class="text-[10px] font-black text-indigo-500 uppercase">상세 설명 (엔터로 줄바꿈 가능)</label>
-    <textarea id="tempDesc" rows="3" 
+    <textarea id="tempDesc" rows="5" 
         class="w-full border-2 border-white p-2.5 rounded-lg outline-none text-[12px] shadow-sm resize-none focus:h-32 transition-all" 
         placeholder="상세 내용을 입력하세요."></textarea>
 </div>
