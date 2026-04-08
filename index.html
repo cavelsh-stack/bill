@@ -196,23 +196,32 @@
     </div>
 </div>
 
-                    <div class="border rounded-2xl overflow-hidden shadow-sm">
-                        <table class="w-full text-sm">
-                            <thead class="bg-slate-900 text-[10px] font-black text-slate-400 uppercase">
-                                <tr><th class="p-3 text-left">품명</th><th class="p-3 text-center w-20">수량</th><th class="p-3 text-right">단가</th><th class="p-3 text-right">소계</th><th class="p-3 text-center w-16">관리</th></tr>
-                            </thead>
-                            <tbody id="quoteListBody" class="divide-y divide-slate-100"></tbody>
-                            <tfoot class="bg-slate-50 font-black">
-                                <tr>
-                                    <td colspan="3" class="p-4 text-right text-slate-500">합계 금액 (부가세 별도)</td>
-                                    <td id="quoteGrandTotal" class="p-4 text-right text-indigo-600 text-lg">0원</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            </div>
+<div class="border rounded-2xl overflow-hidden shadow-sm">
+    <table class="w-full text-sm">
+        <thead class="bg-slate-900 text-[10px] font-black text-slate-400 uppercase">
+            <tr><th class="p-3 text-left">품명</th><th class="p-3 text-center w-20">수량</th><th class="p-3 text-right">단가</th><th class="p-3 text-right">소계</th><th class="p-3 text-center w-16">관리</th></tr>
+        </thead>
+        <tbody id="quoteListBody" class="divide-y divide-slate-100"></tbody>
+        <tfoot class="bg-slate-50 font-black">
+            <tr>
+                <td colspan="3" class="p-4 text-right text-slate-500">
+                    <label class="inline-flex items-center cursor-pointer mr-4 font-normal text-xs text-slate-400">
+                        <input type="checkbox" id="showTotalCheck" checked class="rounded border-slate-300 mr-1"> 합계 표시
+                    </label>
+                    합계 금액 (부가세 별도)
+                </td>
+                <td id="quoteGrandTotal" class="p-4 text-right text-indigo-600 text-lg">0원</td>
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="mt-4 space-y-2">
+    <label class="text-[10px] font-black text-slate-400 uppercase ml-1">별도 내역 (특이사항)</label>
+    <textarea id="quoteMemo" rows="3" placeholder="예: 운송비 별도, 자재 사급 등 기타 조건을 입력하세요." 
+        class="w-full border-2 border-slate-100 p-4 rounded-2xl outline-none focus:border-indigo-500 text-sm leading-relaxed"></textarea>
+</div>
 
             <div class="p-6 border-t bg-slate-50 flex gap-3">
                 <button onclick="saveQuotation()" class="flex-1 bg-slate-900 text-white p-4 rounded-2xl font-black hover:bg-black transition-all">견적서 저장 및 수정</button>
@@ -359,28 +368,29 @@ function renderQuoteParts() {
     document.getElementById('quoteGrandTotal').innerText = total.toLocaleString() + "원";
 }
 
-        async function saveQuotation() {
-            const title = document.getElementById('quoteTitle').value;
-            if(!title || quoteParts.length === 0) { alert("견적 명칭과 품목을 입력하세요."); return; }
+async function saveQuotation() {
+    const title = document.getElementById('quoteTitle').value;
+    if(!title || quoteParts.length === 0) { alert("견적 명칭과 품목을 입력하세요."); return; }
 
-            const data = {
-                title,
-                customer: document.getElementById('quoteCustomer').value,
-                date: new Date().toISOString().substring(0, 10),
-                items: quoteParts,
-                totalAmount: quoteParts.reduce((sum, p) => sum + p.subtotal, 0),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
+    const data = {
+        title,
+        customer: document.getElementById('quoteCustomer').value,
+        date: new Date().toISOString().substring(0, 10),
+        items: quoteParts,
+        totalAmount: quoteParts.reduce((sum, p) => sum + p.subtotal, 0),
+        showTotal: document.getElementById('showTotalCheck').checked, // 저장 추가
+        memo: document.getElementById('quoteMemo').value,           // 저장 추가
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
 
-            try {
-                if(editingQuoteId) await db.collection("quotations").doc(editingQuoteId).update(data);
-                else await db.collection("quotations").add(data);
-                alert("성공적으로 저장되었습니다.");
-                loadQuotations();
-                resetQuoteForm();
-            } catch(e) { alert("저장 실패"); }
-        }
-
+    try {
+        if(editingQuoteId) await db.collection("quotations").doc(editingQuoteId).update(data);
+        else await db.collection("quotations").add(data);
+        alert("성공적으로 저장되었습니다.");
+        loadQuotations();
+        resetQuoteForm();
+    } catch(e) { alert("저장 실패"); }
+}
         async function loadQuotations() {
             const snap = await db.collection("quotations").orderBy("updatedAt", "desc").limit(15).get();
             const container = document.getElementById('quoteHistoryList');
@@ -403,114 +413,107 @@ function renderQuoteParts() {
             });
         }
 
-        async function loadToEditor(id) {
-            const doc = await db.collection("quotations").doc(id).get();
-            const d = doc.data();
-            editingQuoteId = id;
-            document.getElementById('quoteTitle').value = d.title;
-            document.getElementById('quoteCustomer').value = d.customer;
-            quoteParts = d.items;
-            renderQuoteParts();
-        }
-
+async function loadToEditor(id) {
+    const doc = await db.collection("quotations").doc(id).get();
+    const d = doc.data();
+    editingQuoteId = id;
+    document.getElementById('quoteTitle').value = d.title;
+    document.getElementById('quoteCustomer').value = d.customer;
+    document.getElementById('quoteMemo').value = d.memo || ""; // 불러오기
+    document.getElementById('showTotalCheck').checked = (d.showTotal !== undefined) ? d.showTotal : true; // 불러오기
+    quoteParts = d.items;
+    renderQuoteParts();
+}
         async function deleteQuotation(id) { if(confirm("해당 견적 자료를 삭제할까요?")) { await db.collection("quotations").doc(id).delete(); loadQuotations(); } }
 
-        function resetQuoteForm() {
-            editingQuoteId = null;
-            document.getElementById('quoteTitle').value = "";
-            document.getElementById('quoteCustomer').value = "";
-            quoteParts = [];
-            renderQuoteParts();
-        }
-
+function resetQuoteForm() {
+    editingQuoteId = null;
+    document.getElementById('quoteTitle').value = "";
+    document.getElementById('quoteCustomer').value = "";
+    document.getElementById('quoteMemo').value = ""; // 초기화
+    document.getElementById('showTotalCheck').checked = true; // 초기화
+    quoteParts = [];
+    renderQuoteParts();
+}
 async function generatePDF(id) {
-    // 1. 데이터 가져오기 (수정 모드와 상관없이 DB에서 최신 데이터 로드)
     const docRef = await db.collection("quotations").doc(id).get();
     if (!docRef.exists) return;
     const d = docRef.data();
 
-    // 2. 임시 인쇄용 레이아웃 생성 (화면의 버튼 등을 제외하고 깔끔하게 만들기 위함)
-    // 웰디자인 전용 양식으로 구성합니다.
     const element = document.createElement('div');
     element.style.padding = '20px';
-    element.style.width = '190mm'; // A4 폭에 맞춤
+    element.style.width = '190mm';
     element.className = 'bg-white text-slate-900';
 
     const itemsHtml = d.items.map(i => `
-    <tr style="border-bottom: 1px solid #e2e8f0;">
-        <td style="padding: 10px 12px; text-align: left; vertical-align: top;">
-            <div style="font-weight: bold; font-size: 13px; color: #1e293b;">${i.item}</div>
-            ${i.desc ? `<div style="font-size: 10px; color: #64748b; margin-top: 3px; line-height: 1.4;">${i.desc}</div>` : ''}
-        </td>
-        <td style="padding: 10px 12px; text-align: center; vertical-align: top;">${i.qty}</td>
-        <td style="padding: 10px 12px; text-align: right; vertical-align: top;">${i.price.toLocaleString()}</td>
-        <td style="padding: 10px 12px; text-align: right; vertical-align: top; font-weight: bold; white-space: nowrap;">${i.subtotal.toLocaleString()}</td>
-    </tr>
-`).join('');
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 12px; text-align: left; vertical-align: top;">
+                <div style="font-weight: bold; font-size: 13px; color: #1e293b;">${i.item}</div>
+                ${i.desc ? `<div style="font-size: 10px; color: #64748b; margin-top: 3px; line-height: 1.4;">${i.desc}</div>` : ''}
+            </td>
+            <td style="padding: 10px 12px; text-align: center;">${i.qty}</td>
+            <td style="padding: 10px 12px; text-align: right;">${i.price.toLocaleString()}</td>
+            <td style="padding: 10px 12px; text-align: right; font-weight: bold;">${i.subtotal.toLocaleString()}</td>
+        </tr>
+    `).join('');
+
+    // 합계 금액 노출 여부 결정
+    const totalRow = d.showTotal !== false ? `
+        <tr style="background-color: #f8fafc; border-top: 2px solid #1e293b;">
+            <td colspan="3" style="padding: 20px; text-align: right; font-weight: bold; color: #64748b;">합계 금액 (VAT 별도)</td>
+            <td style="padding: 20px; text-align: right; font-size: 18px; font-weight: 900; color: #4f46e5;">${d.totalAmount.toLocaleString()} 원</td>
+        </tr>` : '';
+
+    // 별도 내역 섹션 결정
+    const memoSection = d.memo ? `
+        <div style="margin-top: 20px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #fff;">
+            <p style="font-size: 11px; font-weight: 900; color: #6366f1; margin-bottom: 5px; text-transform: uppercase;">별도 내역:</p>
+            <p style="font-size: 12px; color: #334155; white-space: pre-line; line-height: 1.6;">${d.memo}</p>
+        </div>` : '';
 
     element.innerHTML = `
         <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="font-size: 32px; font-weight: 900; letter-spacing: 10px; margin-bottom: 5px;">견 적 서</h1>
-            <p style="color: #64748b; font-size: 12px;">Well Design Management System</p>
+            <h1 style="font-size: 32px; font-weight: 900; letter-spacing: 10px;">견 적 서</h1>
         </div>
 
-        <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
             <div>
-                <p style="font-size: 14px; margin-bottom: 5px;"><strong>고객명:</strong> ${d.customer || '미지정'} </p>
-                <p style="font-size: 12px; color: #64748b;">일자: ${d.date}</p>
+                <p style="font-size: 14px;"><strong>고객명:</strong> ${d.customer || '미지정'}</p>
+                <p style="font-size: 11px; color: #64748b;">일자: ${d.date}</p>
             </div>
-            <div style="text-align: right; font-size: 12px; line-height: 1.6;">
-                <p><strong>사업자:</strong> 224-05-72328</p>
-                <p><strong>상호:</strong> 웰디자인 (Well Design)</p>
-                <p><strong>주소:</strong> 남양주시 화도읍 마석우리 370-10</p>
-                <p><strong>담당:</strong> 이상호 (010-9590-9782)</p>
+            <div style="text-align: right; font-size: 11px; line-height: 1.5;">
+                <p>상호: 웰디자인 | 등록번호: 224-05-72328</p>
+                <p>담당: 이상호 (010-9590-9782)</p>
             </div>
         </div>
 
-<table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
             <thead>
                 <tr style="background-color: #1e293b; color: white;">
-                    <th style="padding: 12px; text-align: left;">품명 및 규격</th>
-                    <th style="padding: 12px; width: 60px;">수량</th>
-                    <th style="padding: 12px; text-align: right; width: 100px;">단가</th>
-                    <th style="padding: 12px; text-align: right; width: 120px;">금액(부가세 별도)</th>
+                    <th style="padding: 10px; text-align: left;">품명</th>
+                    <th style="padding: 10px; width: 50px;">수량</th>
+                    <th style="padding: 10px; text-align: right; width: 90px;">단가</th>
+                    <th style="padding: 10px; text-align: right; width: 110px;">소계</th>
                 </tr>
             </thead>
-            <tbody>
-                ${itemsHtml}
-            </tbody>
-            <tfoot>
-                <tr style="background-color: #f8fafc; border-top: 2px solid #1e293b;">
-                    <td colspan="3" style="padding: 20px; text-align: right; font-weight: bold; color: #64748b;">
-                        합계 금액 (VAT 별도)
-                    </td>
-                    <td style="padding: 20px; text-align: right; font-size: 18px; font-weight: 900; color: #4f46e5; white-space: nowrap;">
-                        ${d.totalAmount.toLocaleString()} 원
-                    </td>
-                </tr>
-            </tfoot>
+            <tbody>${itemsHtml}</tbody>
+            <tfoot>${totalRow}</tfoot>
         </table>
 
-        <div style="margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 20px;">
-            <p>※ 본 견적서는 발행일로부터 15일간 유효합니다.</p>
-            <p>※ 입금 계좌: 국민은행 015-21-0736-980</p>
+        ${memoSection}
+
+        <div style="margin-top: 40px; font-size: 10px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
+            <p>※ 입금 계좌: 국민은행 015-21-0736-980 (이상호)</p>
         </div>
     `;
 
-    // 3. html2pdf 설정 및 실행
     const options = {
         margin: [10, 10, 10, 10],
-        filename: `견적서_${d.customer}_${d.date}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-            scale: 3, // 숫자가 높을수록 고화질 (보통 2~3 권장)
-            useCORS: true, 
-            letterRendering: true 
-        },
+        filename: `견적서_${d.customer || '무명'}.pdf`,
+        html2canvas: { scale: 3 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // PDF 생성 (화면에 추가하지 않고 메모리에서 바로 변환)
     html2pdf().set(options).from(element).save();
 }
 
