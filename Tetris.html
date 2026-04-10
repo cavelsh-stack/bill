@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>Seasonal Tetris - Strategic Laser Bomb</title>
+    <style>
+        :root { --bg-color: #fff0f3; --container-bg: #ffccd5; --accent-color: #ff4d6d; --text-color: #590d22; }
+        body { background: var(--bg-color); color: var(--text-color); font-family: 'Malgun Gothic', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; transition: background 1.5s ease; overflow: hidden; }
+        #bg-animation { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        .game-layout { display: flex; gap: 30px; align-items: flex-start; position: relative; z-index: 1; }
+        canvas#tetris { border: 5px solid var(--accent-color); background-color: rgba(255, 255, 255, 0.7); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        #game-over { position: absolute; top: 0; left: 0; width: 240px; height: 400px; background: rgba(0, 0, 0, 0.8); display: none; flex-direction: column; align-items: center; justify-content: center; color: white; z-index: 10; border-radius: 5px; }
+        #game-over h2 { color: #ff4d6d; }
+        #game-over button { padding: 10px 20px; background: var(--accent-color); border: none; color: white; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 15px; }
+        .side-panel { display: flex; flex-direction: column; gap: 15px; width: 140px; }
+        .stat-box { background: var(--container-bg); padding: 15px; border-radius: 12px; text-align: center; transition: background 1.5s ease; border: 2px solid rgba(255,255,255,0.3); }
+        .label { font-size: 14px; font-weight: bold; }
+        .value { font-size: 24px; font-weight: bold; }
+        #next-canvas { background: rgba(255, 255, 255, 0.3); border-radius: 8px; margin-top: 5px; }
+        .guide { margin-top: 20px; font-size: 13px; font-weight: bold; background: rgba(255,255,255,0.5); padding: 5px 15px; border-radius: 20px; text-align: center; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-animation"></canvas>
+    <h1 id="season-title">🌸 SPRING</h1>
+    <div class="game-layout">
+        <canvas id="tetris" width="240" height="400"></canvas>
+        <div id="game-over">
+            <h2>GAME OVER</h2>
+            <p>Score: <span id="final-score">0</span></p>
+            <button onclick="resetGame()">RESTART</button>
+        </div>
+        <div class="side-panel">
+            <div class="stat-box">
+                <div class="label">NEXT</div>
+                <canvas id="next-canvas" width="80" height="80"></canvas>
+            </div>
+            <div class="stat-box"><div class="label">SCORE</div><div id="score" class="value">0</div></div>
+            <div class="stat-box"><div class="label">LEVEL</div><div id="level" class="value">1</div></div>
+        </div>
+    </div>
+    <div class="guide">P: 일시정지 | Space: 하드 드롭<br>폭탄이 포함된 <b>줄을 완성하면</b> 레이저 발사!</div>
+
+<script>
+const canvas = document.getElementById('tetris');
+const context = canvas.getContext('2d');
+const nextCanvas = document.getElementById('next-canvas');
+const nextContext = nextCanvas.getContext('2d');
+const bgCanvas = document.getElementById('bg-animation');
+const bgContext = bgCanvas.getContext('2d');
+
+const scoreElement = document.getElementById('score');
+const levelElement = document.getElementById('level');
+const seasonTitle = document.getElementById('season-title');
+const gameOverScreen = document.getElementById('game-over');
+const finalScoreElement = document.getElementById('final-score');
+
+context.scale(20, 20);
+nextContext.scale(20, 20);
+
+// --- 환경 및 색상 설정 ---
+const seasons = [
+    { name: '🌸 SPRING', bg: '#fff0f3', con: '#ffccd5', acc: '#ff4d6d', txt: '#590d22', particle: '🌸' },
+    { name: '🌿 SUMMER', bg: '#e0f7fa', con: '#b2ebf2', acc: '#00bcd4', txt: '#006064', particle: '☀️' },
+    { name: '🍂 AUTUMN', bg: '#fffaf0', con: '#feebc8', acc: '#dd6b20', txt: '#652b19', particle: '🍂' },
+    { name: '❄️ WINTER', bg: '#f0faff', con: '#bee3f8', acc: '#3182ce', txt: '#1a365d', particle: '❄️' }
+];
+
+const colors = [null, '#FF6B6B', '#4ECDC4', '#FFE66D', '#FF9F43', '#A29BFE', '#55E6C1', '#54a0ff', '#000000'];
+let particles = [];
+let lasers = [];
+let isGameOver = false;
+let isPaused = false;
+let arena = createMatrix(12, 20);
+let player = { pos: {x: 0, y: 0}, matrix: null, next: null, score: 0, level: 1 };
+let dropCounter = 0;
+let dropInterval = 1000;
+let lastTime = 0;
+
+function createMatrix(w, h) {
+    const matrix = [];
+    while (h--) matrix.push(new Array(w).fill(0));
+    return matrix;
+}
+
+function createPiece(type) {
+    let p;
+    if (type === 'I') p = [[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]];
+    else if (type === 'L') p = [[0,2,0],[0,2,0],[0,2,2]];
+    else if (type === 'J') p = [[0,3,0],[0,3,0],[3,3,0]];
+    else if (type === 'O') p = [[4,4],[4,4]];
+    else if (type === 'Z') p = [[5,5,0],[0,5,5],[0,0,0]];
+    else if (type === 'S') p = [[0,6,6],[6,6,0],[0,0,0]];
+    else if (type === 'T') p = [[0,7,0],[7,7,7],[0,0,0]];
+
+    // 레벨 3의 배수마다 폭탄 블럭 확률 등장
+    if (player.level % 3 === 0 && Math.random() < 0.4) {
+        let y = Math.floor(Math.random() * p.length);
+        let x = Math.floor(Math.random() * p[y].length);
+        if(p[y][x] !== 0) p[y][x] = 8;
+    }
+    return p;
+}
+
+// --- 렌더링 함수 ---
+function drawMatrix(matrix, offset, ctx) {
+    matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) {
+                if (value === 8) {
+                    ctx.fillStyle = '#000';
+                    ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+                    ctx.fillStyle = '#ff3300'; // 폭탄 심지 효과
+                    ctx.fillRect(x + offset.x + 0.35, y + offset.y + 0.1, 0.3, 0.3);
+                } else {
+                    ctx.fillStyle = colors[value];
+                    ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 0.05;
+                    ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
+                }
+            }
+        });
+    });
+}
+
+function drawLasers() {
+    lasers.forEach((laser, index) => {
+        context.save();
+        context.fillStyle = `rgba(255, 255, 255, ${laser.alpha})`;
+        context.shadowBlur = 15;
+        context.shadowColor = "cyan";
+        context.fillRect(0, laser.y, 12, 1);
+        context.fillStyle = `rgba(0, 255, 255, ${laser.alpha * 0.5})`;
+        context.fillRect(0, laser.y + 0.2, 12, 0.6);
+        context.restore();
+        laser.alpha -= 0.04;
+        if (laser.alpha <= 0) lasers.splice(index, 1);
+    });
+}
+
+// --- 핵심 로직 ---
+function merge(arena, player) {
+    player.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value;
+        });
+    });
+}
+
+function arenaSweep() {
+    let rowCount = 1;
+    outer: for (let y = arena.length - 1; y > 0; --y) {
+        for (let x = 0; x < arena[y].length; ++x) {
+            if (arena[y][x] === 0) continue outer;
+        }
+
+        // 제거될 줄에 폭탄(8)이 있는지 확인
+        const hasBomb = arena[y].includes(8);
+        
+        if (hasBomb) {
+            lasers.push({ y: y, alpha: 1.0 });
+            player.score += 500; // 폭탄 보너스 점수
+        } else {
+            player.score += rowCount * 100;
+        }
+
+        const row = arena.splice(y, 1)[0].fill(0);
+        arena.unshift(row);
+        ++y;
+        rowCount *= 2;
+    }
+    updateScore();
+}
+
+function collide(arena, player) {
+    const [m, o] = [player.matrix, player.pos];
+    for (let y = 0; y < m.length; ++y) {
+        for (let x = 0; x < m[y].length; ++x) {
+            if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true;
+        }
+    }
+    return false;
+}
+
+function playerDrop() {
+    if (isGameOver || isPaused) return;
+    player.pos.y++;
+    if (collide(arena, player)) {
+        player.pos.y--;
+        merge(arena, player);
+        playerReset();
+        arenaSweep();
+    }
+    dropCounter = 0;
+}
+
+function playerHardDrop() {
+    if (isGameOver || isPaused) return;
+    while (!collide(arena, player)) { player.pos.y++; }
+    player.pos.y--;
+    merge(arena, player);
+    playerReset();
+    arenaSweep();
+    dropCounter = 0;
+}
+
+function playerMove(dir) {
+    if (isGameOver || isPaused) return;
+    player.pos.x += dir;
+    if (collide(arena, player)) player.pos.x -= dir;
+}
+
+function playerRotate(dir) {
+    if (isGameOver || isPaused) return;
+    const pos = player.pos.x;
+    let offset = 1;
+    const matrix = player.matrix;
+    for (let y = 0; y < matrix.length; ++y) {
+        for (let x = 0; x < y; ++x) [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+    }
+    if (dir > 0) matrix.forEach(row => row.reverse()); else matrix.reverse();
+    while (collide(arena, player)) {
+        player.pos.x += offset;
+        offset = -(offset + (offset > 0 ? 1 : -1));
+        if (offset > player.matrix[0].length) { player.pos.x = pos; return; }
+    }
+}
+
+function playerReset() {
+    const pieces = 'ILJOTSZ';
+    if (!player.next) player.next = createPiece(pieces[pieces.length * Math.random() | 0]);
+    player.matrix = player.next;
+    player.next = createPiece(pieces[pieces.length * Math.random() | 0]);
+    player.pos.y = 0;
+    player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+    if (collide(arena, player)) {
+        isGameOver = true;
+        finalScoreElement.innerText = player.score;
+        gameOverScreen.style.display = 'flex';
+    }
+}
+
+function resetGame() {
+    arena = createMatrix(12, 20);
+    player.score = 0; player.level = 1; dropInterval = 1000; isGameOver = false; isPaused = false;
+    gameOverScreen.style.display = 'none';
+    updateTheme(1); updateScore(); playerReset();
+}
+
+function updateScore() {
+    scoreElement.innerText = player.score;
+    let newLevel = Math.min(20, Math.floor(player.score / 300) + 1);
+    if (newLevel !== player.level) {
+        player.level = newLevel;
+        levelElement.innerText = player.level;
+        dropInterval = Math.max(100, 1000 - (player.level - 1) * 45);
+        updateTheme(player.level);
+    }
+}
+
+function updateTheme(lv) {
+    const sIdx = (lv - 1) % 4;
+    const s = seasons[sIdx];
+    document.documentElement.style.setProperty('--bg-color', s.bg);
+    document.documentElement.style.setProperty('--container-bg', s.con);
+    document.documentElement.style.setProperty('--accent-color', s.acc);
+    document.documentElement.style.setProperty('--text-color', s.txt);
+    seasonTitle.innerText = `LEVEL ${lv} ${s.name}`;
+}
+
+function draw() {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    drawMatrix(arena, {x: 0, y: 0}, context);
+    drawMatrix(player.matrix, player.pos, context);
+    drawLasers();
+
+    nextContext.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+    drawMatrix(player.next, {x: 1, y: 1}, nextContext);
+    
+    if (isPaused) {
+        context.fillStyle = 'rgba(0,0,0,0.4)';
+        context.fillRect(0, 0, 12, 20);
+        context.fillStyle = 'white';
+        context.font = '1.2px "Arial"';
+        context.textAlign = 'center';
+        context.fillText('PAUSED (P)', 6, 10);
+    }
+    updateParticles();
+}
+
+function updateParticles() {
+    bgContext.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    const sIdx = (player.level - 1) % 4;
+    if (particles.length < 60 && Math.random() < 0.15) {
+        particles.push({ x: Math.random()*bgCanvas.width, y: -20, s: Math.random()*15+10, sp: Math.random()*2+1, a: Math.random()*Math.PI*2, t: sIdx });
+    }
+    particles.forEach((p, i) => {
+        p.y += p.sp; p.a += 0.03;
+        bgContext.save(); bgContext.translate(p.x, p.y); bgContext.rotate(p.a);
+        bgContext.font = `${p.s}px serif`; bgContext.fillText(seasons[p.t].particle, 0, 0);
+        bgContext.restore();
+        if (p.y > bgCanvas.height) particles.splice(i, 1);
+    });
+}
+
+function update(time = 0) {
+    if (!isPaused) {
+        const deltaTime = time - lastTime; lastTime = time;
+        dropCounter += deltaTime;
+        if (dropCounter > dropInterval) playerDrop();
+    } else { lastTime = time; }
+    draw();
+    requestAnimationFrame(update);
+}
+
+document.addEventListener('keydown', event => {
+    if (event.keyCode === 80) { isPaused = !isPaused; return; }
+    if (isPaused || isGameOver) return;
+    if (event.keyCode === 37) playerMove(-1);
+    else if (event.keyCode === 39) playerMove(1);
+    else if (event.keyCode === 40) playerDrop();
+    else if (event.keyCode === 38) playerRotate(1);
+    else if (event.keyCode === 32) { event.preventDefault(); playerHardDrop(); }
+});
+
+window.addEventListener('resize', () => { bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight; });
+bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
+resetGame();
+update();
+</script>
+</body>
+</html>
