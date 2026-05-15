@@ -318,24 +318,40 @@ async function toggleAuth() {
 // [인증 초기화 함수 추가]
 function resetAuth() {
     if(confirm("인증을 해제하고 초기 화면으로 돌아가시겠습니까?")) {
-        // 1. 상태 변수 초기화
+        // 1. 인증 상태 해제
         isAuthenticated = false;
         
-        // 2. UI 요소 토글
-        document.getElementById('authGroup').classList.remove('hidden'); // 패스코드 입력창 보이기
-        document.getElementById('authStatus').classList.add('hidden');    // 인증됨 표시 숨기기
-        document.getElementById('quoteOpenBtn').classList.add('hidden'); // 견적서 버튼 숨기기
-        document.getElementById('data-table-container').classList.add('hidden'); // 데이터 테이블 숨기기
+        // 2. UI 요소 숨김 처리
+        document.getElementById('authGroup').classList.remove('hidden');
+        document.getElementById('authStatus').classList.add('hidden');
+        document.getElementById('quoteOpenBtn').classList.add('hidden');
+        document.getElementById('data-table-container').classList.add('hidden');
         
-        // 3. 엑셀 버튼 비활성화
+        // 3. ★ 핵심: 테이블 데이터 및 요약 수치 즉시 비우기 ★
+        document.getElementById('data-list').innerHTML = ""; // 표 내용 삭제
+        
+        // 요약 카드들도 초기화 (**** 표시로 복구)
+        const summaryIds = [
+            'q1-sales', 'q1-purchase', 'q1-nodata', 
+            'q2-sales', 'q2-purchase', 'q2-nodata',
+            'cur-month-sales', 'cur-month-purchase', 
+            'cur-month-profit', 'total-unpaid', 'total-profit'
+        ];
+        summaryIds.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.innerText = "****";
+        });
+
+        // 4. 엑셀 버튼 비활성화
         const excelBtn = document.getElementById('excelBtn');
         excelBtn.disabled = true;
         excelBtn.className = "bg-slate-100 text-slate-400 px-6 py-2.5 rounded-xl font-bold cursor-not-allowed text-sm";
         
-        // 4. 입력 필드 초기화
+        // 5. 입력창 및 검색어 초기화
         document.getElementById('mainPwInput').value = "";
+        document.getElementById('searchInput').value = "";
         
-        alert("인증이 해제되었습니다.");
+        alert("인증이 해제되었으며 모든 데이터가 화면에서 소거되었습니다.");
         window.scrollTo({top: 0, behavior: 'smooth'});
     }
 }
