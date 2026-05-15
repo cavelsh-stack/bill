@@ -36,7 +36,14 @@
                     <input type="password" id="mainPwInput" placeholder="Passcode" class="bg-transparent px-3 py-1 w-24 text-center outline-none font-bold text-sm text-white">
                     <button onclick="toggleAuth()" class="bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded-lg font-bold text-sm transition-all">접속</button>
                 </div>
-                <div id="authStatus" class="hidden text-emerald-400 font-bold text-sm px-4 py-2 bg-emerald-400/10 rounded-xl border border-emerald-400/20">✅ 인증됨</div>
+                <div id="authStatus" class="hidden flex items-center gap-3">
+    <div class="text-emerald-400 font-bold text-sm px-4 py-2 bg-emerald-400/10 rounded-xl border border-emerald-400/20">
+        ✅ 인증됨
+    </div>
+    <button onclick="resetAuth()" class="bg-slate-700 hover:bg-rose-600 text-slate-300 hover:text-white px-3 py-2 rounded-xl text-xs font-bold transition-all border border-slate-600">
+        초기화
+    </button>
+</div>
             </div>
         </div>
     </nav>
@@ -305,6 +312,31 @@ async function toggleAuth() {
     } finally {
         authBtn.innerText = "접속";
         authBtn.disabled = false;
+    }
+}
+
+// [인증 초기화 함수 추가]
+function resetAuth() {
+    if(confirm("인증을 해제하고 초기 화면으로 돌아가시겠습니까?")) {
+        // 1. 상태 변수 초기화
+        isAuthenticated = false;
+        
+        // 2. UI 요소 토글
+        document.getElementById('authGroup').classList.remove('hidden'); // 패스코드 입력창 보이기
+        document.getElementById('authStatus').classList.add('hidden');    // 인증됨 표시 숨기기
+        document.getElementById('quoteOpenBtn').classList.add('hidden'); // 견적서 버튼 숨기기
+        document.getElementById('data-table-container').classList.add('hidden'); // 데이터 테이블 숨기기
+        
+        // 3. 엑셀 버튼 비활성화
+        const excelBtn = document.getElementById('excelBtn');
+        excelBtn.disabled = true;
+        excelBtn.className = "bg-slate-100 text-slate-400 px-6 py-2.5 rounded-xl font-bold cursor-not-allowed text-sm";
+        
+        // 4. 입력 필드 초기화
+        document.getElementById('mainPwInput').value = "";
+        
+        alert("인증이 해제되었습니다.");
+        window.scrollTo({top: 0, behavior: 'smooth'});
     }
 }
 
