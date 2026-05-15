@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>입출금(웰디자인)</title>
+    <title>Well Design Management System V19.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -56,7 +56,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
-                    <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-md mb-4 inline-block uppercase">1월~6월 (세금계산서용)</span>
+                    <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-md mb-4 inline-block uppercase">1분기 (1월~6월) (세금계산용)</span>
                     <div class="grid grid-cols-3 gap-2">
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase">매출</p><p id="q1-sales" class="font-bold text-blue-700 text-sm">****</p></div>
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase">매입</p><p id="q1-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
@@ -64,7 +64,7 @@
                     </div>
                 </div>
                 <div class="p-6 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl border border-emerald-100">
-                    <span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-md mb-4 inline-block uppercase">7월~12월 (세금계산서용)</span>
+                    <span class="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-md mb-4 inline-block uppercase">2분기 (7월~12월) (세금계산용)</span>
                     <div class="grid grid-cols-3 gap-2">
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase">매출</p><p id="q2-sales" class="font-bold text-emerald-700 text-sm">****</p></div>
                         <div><p class="text-[10px] text-slate-400 font-bold uppercase">매입</p><p id="q2-purchase" class="font-bold text-slate-600 text-sm">****</p></div>
@@ -192,17 +192,17 @@
         placeholder="상세 내용을 입력하세요."></textarea>
 </div>
 
-<div class="col-span-2 space-y-1"> <label class="text-[12px] font-black text-indigo-500 uppercase">수량</label>
-    <input type="number" id="tempQty" value="1" 
-        class="w-full border-2 border-white p-2.5 rounded-lg outline-none text-center font-bold shadow-sm text-sm">
-</div>
-<div class="col-span-3 space-y-1"> <label class="text-[12px] font-black text-indigo-500 uppercase">단가</label>
-    <input type="text" id="tempPrice" oninput="formatCurrency(this)" 
-        class="w-full border-2 border-white p-2.5 rounded-lg outline-none text-right font-bold shadow-sm text-sm">
-</div>
-<div class="col-span-1">
-    <button onclick="addPartRow()" class="w-full bg-indigo-600 text-white p-2.5 rounded-lg font-black hover:bg-indigo-700 transition-all shadow-md">＋</button>
-</div>
+    <div class="col-span-1 space-y-1">
+        <label class="text-[12px] font-black text-indigo-500 uppercase">수량</label>
+        <input type="number" id="tempQty" value="1" class="w-full border-2 border-white p-2.5 rounded-lg outline-none text-center font-bold shadow-sm">
+    </div>
+    <div class="col-span-2 space-y-1">
+        <label class="text-[12px] font-black text-indigo-500 uppercase">단가</label>
+        <input type="text" id="tempPrice" oninput="formatCurrency(this)" class="w-full border-2 border-white p-2.5 rounded-lg outline-none text-right font-bold shadow-sm">
+    </div>
+    <div class="col-span-1">
+        <button onclick="addPartRow()" class="w-full bg-indigo-600 text-white p-2.5 rounded-lg font-black hover:bg-indigo-700 transition-all shadow-md">＋</button>
+    </div>
 </div>
 
 <div class="border rounded-2xl overflow-hidden shadow-sm">
@@ -262,19 +262,51 @@
         let quoteParts = [];
         let editingQuoteId = null;
 
-        // 인증 로직
-        function toggleAuth() {
-            if (document.getElementById('mainPwInput').value === "0927") {
-                isAuthenticated = true;
-                document.getElementById('authGroup').classList.add('hidden');
-                document.getElementById('authStatus').classList.remove('hidden');
-                document.getElementById('quoteOpenBtn').classList.remove('hidden');
-                document.getElementById('excelBtn').disabled = false;
-                document.getElementById('excelBtn').className = "bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer text-sm shadow-md";
-                document.getElementById('data-table-container').classList.remove('hidden');
-                filterList();
-            } else { alert("Passcode 오류"); }
+// [기존 소스 수정] 인증 로직
+async function toggleAuth() {
+    const inputPw = document.getElementById('mainPwInput').value;
+    const authBtn = document.querySelector('#authGroup button');
+    
+    if (!inputPw) {
+        alert("Passcode를 입력하세요.");
+        return;
+    }
+
+    try {
+        // 버튼 상태 변경 (로딩 표시)
+        authBtn.innerText = "확인 중...";
+        authBtn.disabled = true;
+
+        // Firebase settings 컬렉션에서 암호 정보 가져오기
+        const doc = await db.collection("settings").doc("admin").get();
+        
+        if (!doc.exists) {
+            alert("서버 설정 오류: 관리자 설정을 찾을 수 없습니다.");
+            return;
         }
+
+        const serverPw = doc.data().passcode;
+
+        if (inputPw === serverPw.toString()) {
+            isAuthenticated = true;
+            document.getElementById('authGroup').classList.add('hidden');
+            document.getElementById('authStatus').classList.remove('hidden');
+            document.getElementById('quoteOpenBtn').classList.remove('hidden');
+            document.getElementById('excelBtn').disabled = false;
+            document.getElementById('excelBtn').className = "bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer text-sm shadow-md";
+            document.getElementById('data-table-container').classList.remove('hidden');
+            filterList();
+        } else {
+            alert("Passcode가 일치하지 않습니다.");
+        }
+    } catch (e) {
+        console.error("인증 오류:", e);
+        alert("네트워크 오류가 발생했습니다.");
+    } finally {
+        authBtn.innerText = "접속";
+        authBtn.disabled = false;
+    }
+}
 
         // 공통 유틸리티
         function formatCurrency(input) {
