@@ -32,10 +32,13 @@
                 <button onclick="openQuoteModal()" id="quoteOpenBtn" class="hidden flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-xl transition-all shadow-lg shadow-indigo-500/20">
                     <span class="text-sm font-bold text-white">📄 견적서 시스템</span>
                 </button>
-                <div id="authGroup" class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
-                    <input type="password" id="mainPwInput" placeholder="Passcode" class="bg-transparent px-3 py-1 w-24 text-center outline-none font-bold text-sm text-white">
-                    <button onclick="toggleAuth()" class="bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded-lg font-bold text-sm transition-all">접속</button>
-                </div>
+               <div id="authGroup" class="flex items-center gap-2 bg-slate-800 p-1.5 rounded-xl border border-slate-700">
+    <input type="password" id="mainPwInput" 
+           placeholder="Passcode" 
+           onkeyup="if(window.event.keyCode==13){toggleAuth()}"
+           class="bg-transparent px-3 py-1 w-24 text-center outline-none font-bold text-sm text-white">
+    <button onclick="toggleAuth()" class="bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded-lg font-bold text-sm transition-all">접속</button>
+</div>
                 <div id="authStatus" class="hidden flex items-center gap-3">
     <div class="text-emerald-400 font-bold text-sm px-4 py-2 bg-emerald-400/10 rounded-xl border border-emerald-400/20">
         ✅ 인증됨
@@ -280,35 +283,44 @@ async function toggleAuth() {
     }
 
     try {
-        // 버튼 상태 변경 (로딩 표시)
-        authBtn.innerText = "확인 중...";
+        // 버튼 로딩 상태 표시
+        authBtn.innerText = "확인중";
         authBtn.disabled = true;
 
-        // Firebase settings 컬렉션에서 암호 정보 가져오기
+        // Firebase에서 암호 정보 가져오기
         const doc = await db.collection("settings").doc("admin").get();
         
         if (!doc.exists) {
-            alert("서버 설정 오류: 관리자 설정을 찾을 수 없습니다.");
+            alert("서버에 관리자 설정이 없습니다. Firebase를 확인하세요.");
             return;
         }
 
-        const serverPw = doc.data().passcode;
+        const serverPw = doc.data().passcode.toString();
 
-        if (inputPw === serverPw.toString()) {
+        if (inputPw === serverPw) {
             isAuthenticated = true;
+            
+            // UI 전환
             document.getElementById('authGroup').classList.add('hidden');
             document.getElementById('authStatus').classList.remove('hidden');
             document.getElementById('quoteOpenBtn').classList.remove('hidden');
-            document.getElementById('excelBtn').disabled = false;
-            document.getElementById('excelBtn').className = "bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer text-sm shadow-md";
             document.getElementById('data-table-container').classList.remove('hidden');
+            
+            // 엑셀 버튼 활성화
+            const excelBtn = document.getElementById('excelBtn');
+            excelBtn.disabled = false;
+            excelBtn.className = "bg-emerald-500 text-white px-6 py-2.5 rounded-xl font-bold cursor-pointer text-sm shadow-md";
+            
+            // 데이터 로드
             filterList();
         } else {
-            alert("Passcode가 일치하지 않습니다.");
+            alert("Passcode 오류입니다.");
+            document.getElementById('mainPwInput').value = "";
+            document.getElementById('mainPwInput').focus();
         }
     } catch (e) {
-        console.error("인증 오류:", e);
-        alert("네트워크 오류가 발생했습니다.");
+        console.error("인증 과정 오류:", e);
+        alert("네트워크 상태를 확인해주세요.");
     } finally {
         authBtn.innerText = "접속";
         authBtn.disabled = false;
