@@ -830,7 +830,40 @@ function filterList() {
         }
 
         async function deleteDoc(id) { if(confirm("삭제하시겠습니까?")) await db.collection("bills").doc(id).delete(); }
-        function downloadExcel() { if(isAuthenticated) { const wb = XLSX.utils.table_to_book(document.getElementById("main-table")); XLSX.writeFile(wb, "WellDesign_Finance.xlsx"); } }
+        function downloadExcel() {
+    if (!isAuthenticated) return;
+
+    // 1. 전체 데이터(allData)를 엑셀용 JSON 배열로 변환
+    const excelData = allData.map(d => ({
+        "날짜": d.date || "",
+        "고객명": d.customer || "",
+        "주소": d.address || "",
+        "품목 상세": d.item || "",
+        "무자료 금액": d.noDataAmount || 0,
+        "매입 원가": d.purchasePrice || 0,
+        "판매 가격": d.salePrice || 0,
+        "순이익": d.difference || 0,
+        "결제 방식": d.paymentMethod || "",
+        "입금 상태": d.unpaidStatus || ""
+    }));
+
+    // 2. 워크시트 생성
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "전체회계기록");
+
+    // 3. 컬럼 너비 자동 조절 (선택 사항)
+    const wscols = [
+        {wch: 12}, {wch: 20}, {wch: 30}, {wch: 35}, {wch: 12}, 
+        {wch: 12}, {wch: 12}, {wch: 12}, {wch: 12}, {wch: 12}
+    ];
+    worksheet['!cols'] = wscols;
+
+    // 4. 파일 다운로드 (파일명에 오늘 날짜 포함)
+    const today = new Date().toISOString().substring(0, 10);
+    XLSX.writeFile(workbook, `WellDesign_Full_Data_${today}.xlsx`);
+}
+
         function resetSearch() { document.getElementById('searchInput').value = ""; filterList(); }
         function toggleFilter(f) { currentFilter = (currentFilter === f) ? 'none' : f; filterList(); }
         function setFilterMode(m) { currentFilterMode = (currentFilterMode === m) ? 'all' : m; filterList(); }
