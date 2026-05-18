@@ -664,27 +664,37 @@ function filterList() {
     // 1. 선택된 연도 데이터 기본 필터링
     let filtered = allData.filter(d => (d.date || "").startsWith(targetYear));
 
-    // 2. [핵심 수정] 3월, 4월, 5월 데이터만 보이도록 제한
+    // 2. [로직 수정] 검색어가 없을 때만 최근 3개월(3~5월)로 제한
     if (targetYear === "2026") {
-        filtered = filtered.filter(d => {
-            const rowMonth = parseInt((d.date || "").split("-")[1]);
-            // 3월(3) 이상이면서 5월(5) 이하인 데이터만 허용
-            return rowMonth >= 3 && rowMonth <= 5;
-        });
+        if (!q) { 
+            // 검색어가 비어있을 때는 3, 4, 5월만 필터링
+            filtered = filtered.filter(d => {
+                const rowMonth = parseInt((d.date || "").split("-")[1]);
+                return rowMonth >= 3 && rowMonth <= 5;
+            });
+        } 
+        // 검색어(q)가 있는 경우에는 위 조건(3~5월 제한)을 건너뛰어 전체에서 찾게 됩니다.
     }
 
-    // 3. 기존 검색어 및 상태 필터링 로직 유지
-    if (q) filtered = filtered.filter(d => (d.customer||"").toLowerCase().includes(q) || (d.item||"").toLowerCase().includes(q));
+    // 3. 검색어 필터링 (검색어가 있으면 전체 데이터 중에서 키워드 매칭)
+    if (q) {
+        filtered = filtered.filter(d => 
+            (d.customer || "").toLowerCase().includes(q) || 
+            (d.item || "").toLowerCase().includes(q)
+        );
+    }
+
+    // 4. 기타 상태 필터 (미납/미처리)
     if (currentFilter === 'unpaid') filtered = filtered.filter(d => d.unpaidStatus === "미납");
     if (currentFilter === 'pending') filtered = filtered.filter(d => d.paymentMethod === "미처리");
     
-    // 4. 월간 보기 모드 처리
+    // 5. 월간 보기 모드 처리
     if (currentFilterMode === 'monthly') {
         const curM = new Date().toISOString().substring(0, 7);
         filtered = filtered.filter(d => (d.date || "").startsWith(curM));
     }
 
-    // 필터링된 결과로 UI 업데이트 (상단 요약 카드 수치도 이 리스트 기준으로 자동 계산됨)
+    // UI 및 상단 요약 수치 업데이트
     renderUI(filtered, targetYear);
 }
 
