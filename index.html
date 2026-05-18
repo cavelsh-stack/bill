@@ -661,30 +661,30 @@ function filterList() {
     const q = document.getElementById('searchInput').value.toLowerCase();
     const targetYear = document.getElementById('yearSelect').value;
     
-    // 1. 선택된 연도 데이터 필터링
+    // 1. 선택된 연도 데이터 기본 필터링
     let filtered = allData.filter(d => (d.date || "").startsWith(targetYear));
-    
-    // 2. [추가] 2026년 5월인 경우, 3월(03)까지만 보이도록 제한
-    const now = new Date();
-    const curYear = now.getFullYear();
-    const curMonth = now.getMonth() + 1; // 1~12월
 
-    if (curYear === 2026 && curMonth === 5 && targetYear === "2026") {
+    // 2. [핵심 수정] 3월, 4월, 5월 데이터만 보이도록 제한
+    if (targetYear === "2026") {
         filtered = filtered.filter(d => {
             const rowMonth = parseInt((d.date || "").split("-")[1]);
-            return rowMonth <= 3; // 3월 이하 데이터만 포함
+            // 3월(3) 이상이면서 5월(5) 이하인 데이터만 허용
+            return rowMonth >= 3 && rowMonth <= 5;
         });
     }
 
-    // 3. 기존 검색 및 필터링 로직 유지
+    // 3. 기존 검색어 및 상태 필터링 로직 유지
     if (q) filtered = filtered.filter(d => (d.customer||"").toLowerCase().includes(q) || (d.item||"").toLowerCase().includes(q));
     if (currentFilter === 'unpaid') filtered = filtered.filter(d => d.unpaidStatus === "미납");
     if (currentFilter === 'pending') filtered = filtered.filter(d => d.paymentMethod === "미처리");
+    
+    // 4. 월간 보기 모드 처리
     if (currentFilterMode === 'monthly') {
         const curM = new Date().toISOString().substring(0, 7);
         filtered = filtered.filter(d => (d.date || "").startsWith(curM));
     }
-    
+
+    // 필터링된 결과로 UI 업데이트 (상단 요약 카드 수치도 이 리스트 기준으로 자동 계산됨)
     renderUI(filtered, targetYear);
 }
 
