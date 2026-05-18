@@ -147,7 +147,7 @@
                 <table id="main-table" class="w-full text-sm text-left border-collapse">
                     <thead>
                         <tr class="bg-slate-50 text-slate-400 uppercase text-[10px] font-black tracking-widest border-b">
-                            <th class="p-4">날짜</th><th class="p-4">고객명 / 상태</th><th class="p-4 text-center">방식</th><th class="p-4 text-right">무자료</th><th class="p-4 text-right">매입가</th><th class="p-4 text-right font-black">판매가</th><th class="p-4 text-right bg-slate-50/80 font-black">순익</th><th class="p-4 text-center">관리</th>
+                            <th class="p-4">날짜</th><th class="p-4">고객명 / 상태</th><th class="p-4">품목 상세</th><th class="p-4 text-center">방식</th><th class="p-4 text-right">무자료</th><th class="p-4 text-right">매입가</th><th class="p-4 text-right font-black">판매가</th><th class="p-4 text-right bg-slate-50/80 font-black">순익</th><th class="p-4 text-center">관리</th>
                         </tr>
                     </thead>
                     <tbody id="data-list" class="divide-y divide-slate-50"></tbody>
@@ -725,26 +725,29 @@ function filterList() {
             });
 
             listItems.forEach(b => {
-                const isUnpaid = (b.unpaidStatus === "미납");
-                const isPending = (b.paymentMethod === "미처리");
-                const fmt = (v) => Number(v || 0).toLocaleString();
-                let rowStyle = isUnpaid ? "bg-rose-50 border-l-4 border-rose-500" : (isPending ? "bg-amber-50 border-l-4 border-amber-400" : "hover:bg-slate-50");
+    const isUnpaid = (b.unpaidStatus === "미납");
+    const isPending = (b.paymentMethod === "미처리");
+    const fmt = (v) => Number(v || 0).toLocaleString();
+    let rowStyle = isUnpaid ? "bg-rose-50 border-l-4 border-rose-500" : (isPending ? "bg-amber-50 border-l-4 border-amber-400" : "hover:bg-slate-50");
 
-                listBody.innerHTML += `
-                    <tr class="border-b ${rowStyle} whitespace-nowrap transition-all">
-                        <td class="p-4 text-[11px] font-bold text-slate-400">${b.date}</td>
-                        <td class="p-4"><div class="flex items-center gap-2 font-black text-slate-800">${b.customer}${isUnpaid ? '<span class="animate-pulse-red bg-rose-600 text-white text-[9px] px-1.5 py-0.5 rounded-md">미납🚨</span>' : ''}</div></td>
-                        <td class="p-4 text-center text-[10px] font-black text-slate-500">${b.paymentMethod}</td>
-                        <td class="p-4 text-right text-orange-600 font-bold">${fmt(b.noDataAmount)}</td>
-                        <td class="p-4 text-right text-slate-400">${fmt(b.purchasePrice)}</td>
-                        <td class="p-4 text-right font-black ${isUnpaid ? 'text-rose-600' : 'text-slate-900'}">${fmt(b.salePrice)}</td>
-                        <td class="p-4 text-right font-black text-blue-600 bg-white/30">${fmt(b.difference)}</td>
-                        <td class="p-4 text-center space-x-1">
-                            <button onclick="editDoc('${b.id}')" class="text-[10px] font-bold border px-2 py-1.5 rounded-lg bg-white shadow-sm">수정</button>
-                            <button onclick="deleteDoc('${b.id}')" class="text-[10px] font-bold border border-rose-100 text-rose-500 px-2 py-1.5 rounded-lg bg-white shadow-sm">삭제</button>
-                        </td>
-                    </tr>`;
-            });
+    listBody.innerHTML += `
+        <tr class="border-b ${rowStyle} whitespace-nowrap transition-all">
+            <td class="p-4 text-[11px] font-bold text-slate-400">${b.date}</td>
+            <td class="p-4"><div class="flex items-center gap-2 font-black text-slate-800">${b.customer}${isUnpaid ? '<span class="animate-pulse-red bg-rose-600 text-white text-[9px] px-1.5 py-0.5 rounded-md">미납🚨</span>' : ''}</div></td>
+            
+            <td class="p-4 text-[11px] text-slate-600 truncate max-w-[150px]">${b.item || ""}</td> 
+            
+            <td class="p-4 text-center text-[10px] font-black text-slate-500">${b.paymentMethod}</td>
+            <td class="p-4 text-right text-orange-600 font-bold">${fmt(b.noDataAmount)}</td>
+            <td class="p-4 text-right text-slate-400">${fmt(b.purchasePrice)}</td>
+            <td class="p-4 text-right font-black ${isUnpaid ? 'text-rose-600' : 'text-slate-900'}">${fmt(b.salePrice)}</td>
+            <td class="p-4 text-right font-black text-blue-600 bg-white/30">${fmt(b.difference)}</td>
+            <td class="p-4 text-center space-x-1">
+                <button onclick="editDoc('${b.id}')" class="text-[10px] font-bold border px-2 py-1.5 rounded-lg bg-white shadow-sm">수정</button>
+                <button onclick="deleteDoc('${b.id}')" class="text-[10px] font-bold border border-rose-100 text-rose-500 px-2 py-1.5 rounded-lg bg-white shadow-sm">삭제</button>
+            </td>
+        </tr>`;
+});
 
             const msk = (v) => v.toLocaleString() + "원";
             document.getElementById('q1-sales').innerText = msk(s.q1S);
