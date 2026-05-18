@@ -657,19 +657,36 @@ async function generatePDF(id) {
 }
 
         // 기존 V16.6 UI 렌더링 및 필터링 함수 (동일 구조 유지)
-        function filterList() {
-            const q = document.getElementById('searchInput').value.toLowerCase();
-            const targetYear = document.getElementById('yearSelect').value;
-            let filtered = allData.filter(d => (d.date || "").startsWith(targetYear));
-            if (q) filtered = filtered.filter(d => (d.customer||"").toLowerCase().includes(q) || (d.item||"").toLowerCase().includes(q));
-            if (currentFilter === 'unpaid') filtered = filtered.filter(d => d.unpaidStatus === "미납");
-            if (currentFilter === 'pending') filtered = filtered.filter(d => d.paymentMethod === "미처리");
-            if (currentFilterMode === 'monthly') {
-                const curM = new Date().toISOString().substring(0, 7);
-                filtered = filtered.filter(d => (d.date || "").startsWith(curM));
-            }
-            renderUI(filtered, targetYear);
-        }
+function filterList() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    const targetYear = document.getElementById('yearSelect').value;
+    
+    // 1. 선택된 연도 데이터 필터링
+    let filtered = allData.filter(d => (d.date || "").startsWith(targetYear));
+    
+    // 2. [추가] 2026년 5월인 경우, 3월(03)까지만 보이도록 제한
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = now.getMonth() + 1; // 1~12월
+
+    if (curYear === 2026 && curMonth === 5 && targetYear === "2026") {
+        filtered = filtered.filter(d => {
+            const rowMonth = parseInt((d.date || "").split("-")[1]);
+            return rowMonth <= 3; // 3월 이하 데이터만 포함
+        });
+    }
+
+    // 3. 기존 검색 및 필터링 로직 유지
+    if (q) filtered = filtered.filter(d => (d.customer||"").toLowerCase().includes(q) || (d.item||"").toLowerCase().includes(q));
+    if (currentFilter === 'unpaid') filtered = filtered.filter(d => d.unpaidStatus === "미납");
+    if (currentFilter === 'pending') filtered = filtered.filter(d => d.paymentMethod === "미처리");
+    if (currentFilterMode === 'monthly') {
+        const curM = new Date().toISOString().substring(0, 7);
+        filtered = filtered.filter(d => (d.date || "").startsWith(curM));
+    }
+    
+    renderUI(filtered, targetYear);
+}
 
         function renderUI(listItems, targetYear) {
             if (!isAuthenticated) return;
